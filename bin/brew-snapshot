@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BREW_SNAPSHOT_VERSION="0.1.0"
+export BREW_SNAPSHOT_DIR="${BREW_SNAPSHOT_DIR:-$HOME/.local/share/brew-snapshot}"
+
+# libexec location: Homebrew install → $(brew --prefix)/libexec/brew-snapshot/commands
+# Local dev → relative to this script
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIBEXEC_DIR="$_self/../libexec/commands"
+
+cmd="${1:-help}"
+shift 2>/dev/null || true
+
+case "$cmd" in
+  snapshot) exec "$LIBEXEC_DIR/snapshot.sh" "$@" ;;
+  restore)  exec "$LIBEXEC_DIR/restore.sh"  "$@" ;;
+  status)   exec "$LIBEXEC_DIR/status.sh"   "$@" ;;
+  setup)    exec "$LIBEXEC_DIR/setup.sh"    "$@" ;;
+  --version|-V)
+    echo "brew-snapshot $BREW_SNAPSHOT_VERSION"
+    ;;
+  help|--help|-h|"")
+    echo "Usage: brew-snapshot <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  snapshot [--greedy]  Update Homebrew and save current state"
+    echo "  restore              Reinstall packages from Brewfile"
+    echo "  status               Show last snapshot time and package counts"
+    echo "  setup                Register launchd agent for automatic snapshots"
+    echo "  help                 Show this help"
+    echo ""
+    echo "State directory: ${BREW_SNAPSHOT_DIR:-~/.local/share/brew-snapshot}"
+    ;;
+  *)
+    echo "brew-snapshot: unknown command '$cmd'" >&2
+    echo "Run 'brew-snapshot help' for usage." >&2
+    exit 1
+    ;;
+esac
