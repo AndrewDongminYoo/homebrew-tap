@@ -1,8 +1,8 @@
 class BrewSnapshot < Formula
   desc "Snapshot and restore your Homebrew environment"
-  homepage "https://github.com/dongminyu/homebrew-brew-snapshot"
+  homepage "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot"
   # url and sha256 are filled after a GitHub release tag is created
-  # url "https://github.com/dongminyu/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
+  # url "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
   # sha256 "..."
   version "0.1.0"
   license "MIT"
