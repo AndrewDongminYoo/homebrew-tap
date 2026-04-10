@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.__USER__.brew-snapshot</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>__BIN__</string>
+      <string>snapshot</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>__STATE_DIR__/snapshot.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>__STATE_DIR__/snapshot.stderr.log</string>
+  </dict>
+</plist>
