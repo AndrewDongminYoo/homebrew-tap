@@ -1,11 +1,13 @@
 class BrewSnapshot < Formula
   desc "Snapshot and restore your Homebrew environment"
   homepage "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot"
-  # url and sha256 are filled after a GitHub release tag is created
-  # url "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
+  # Stable: fill url + sha256 after creating a GitHub release tag
+  # url "https://github.com/AndrewDongminYu/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
   # sha256 "..."
   version "0.1.0"
   license "MIT"
+
+  head "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot.git", branch: "main"
 
   def install
     bin.install "bin/brew-snapshot"
