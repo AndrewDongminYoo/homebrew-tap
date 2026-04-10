@@ -2,10 +2,15 @@
   "cSpell.words": [
     "Dongmin",
     "inreplace",
+    "Justintime",
     "libexec",
     "LIBEXEC",
     "pipefail",
     "regeneratable",
     "untap"
-  ]
+  ],
+  "files.associations": {
+    "bin/brew-snapshot": "shellscript",
+    "share/brew-snapshot.plist.template": "xml"
+  }
 }

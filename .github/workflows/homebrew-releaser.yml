@@ -1,0 +1,49 @@
+name: homebrew-releaser
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  homebrew-releaser:
+    runs-on: ubuntu-latest
+    name: Release to Homebrew tap
+    steps:
+      - name: Release brew-snapshot to Homebrew tap
+        uses: Justintime50/homebrew-releaser@v3.3.0
+        with:
+          # GitHub username that owns the tap repo
+          homebrew_owner: AndrewDongminYuu
+          # Tap repo name (must be homebrew-<name>)
+          homebrew_tap: homebrew-brew-snapshot
+          # Folder inside the tap repo where the formula lives
+          formula_folder: Formula
+          # PAT with `repo` scope — add as a repository secret named HOMEBREW_RELEASER_TOKEN
+          github_token: ${{ secrets.HOMEBREW_RELEASER_TOKEN }}
+
+          commit_owner: github-actions[bot]
+          commit_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+          # Ruby code for the install block (homebrew-releaser wraps this automatically)
+          install: |
+            bin.install "bin/brew-snapshot"
+            (libexec/"commands").install Dir["libexec/commands/*"]
+            (share/"brew-snapshot").install "share/brew-snapshot.plist.template"
+            inreplace bin/"brew-snapshot",
+              %r{_self/\.\./libexec/commands},
+              "#{libexec}/commands"
+
+          # Text inside caveats heredoc (homebrew-releaser adds <<~EOS wrapper)
+          caveats: |
+            Run setup to enable automatic snapshots on login:
+              brew-snapshot setup
+
+            Default state directory: ~/.local/share/brew-snapshot/
+            Override:  export BREW_SNAPSHOT_DIR=/your/path
+
+          # Ruby code for the test block
+          test: |
+            output = shell_output("#{bin}/brew-snapshot help")
+            assert_match "Usage: brew-snapshot", output
+
+          skip_commit: false
