@@ -29,7 +29,7 @@ if [[ -f "$STATE_DIR/Brewfile" ]]; then
 fi
 
 if [[ -f "$STATE_DIR/Brewfile.taps" ]]; then
-  tap_count=$(wc -l < "$STATE_DIR/Brewfile.taps")
+  tap_count=$(wc -l < "$STATE_DIR/Brewfile.taps" | tr -d ' ')
 fi
 
 echo "Formulae:       $formula_count"
