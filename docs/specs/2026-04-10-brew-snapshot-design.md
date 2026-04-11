@@ -5,11 +5,11 @@
 
 ## Goal
 
-A Homebrew tap (`AndrewDongminYoo/brew-snapshot`) that provides a CLI tool for snapshotting and restoring a macOS Homebrew environment. Distributed via `brew install`, configured via `brew-snapshot setup`.
+A Homebrew tap (`AndrewDongminYoo/tap`) that provides a CLI tool for snapshotting and restoring a macOS Homebrew environment. Distributed via `brew install`, configured via `brew-snapshot setup`.
 
 ## Repository Structure
 
-**Tool source** lives at `~/Development/01_personal/brew-snapshot` and is published as GitHub repo `AndrewDongminYoo/homebrew-brew-snapshot`.
+**Tool source** lives at `~/Development/01_personal/brew-snapshot` and is published as GitHub repo `AndrewDongminYoo/homebrew-tap`.
 
 **State directory** is `~/.local/share/brew-snapshot/` — a plain data folder, not a git repo. Path can be overridden with `$BREW_SNAPSHOT_DIR`.
 
@@ -84,7 +84,7 @@ Script uses `set -euo pipefail`. Steps 3–8 run only after upgrade completes.
 ```ruby
 class BrewSnapshot < Formula
   desc "Snapshot and restore your Homebrew environment"
-  homepage "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot"
+  homepage "https://github.com/AndrewDongminYoo/homebrew-tap"
   url "..."
   version "0.1.0"
 
@@ -109,7 +109,7 @@ end
 ## Installation Flow
 
 ```bash
-brew tap AndrewDongminYoo/brew-snapshot
+brew tap AndrewDongminYoo/tap
 brew install brew-snapshot
 brew-snapshot setup       # register launchd agent
 brew-snapshot snapshot    # first snapshot

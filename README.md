@@ -5,7 +5,7 @@ Snapshot and restore your Homebrew environment.
 ## Install
 
 ```bash
-brew tap AndrewDongminYoo/brew-snapshot
+brew tap AndrewDongminYoo/tap
 brew install brew-snapshot
 brew-snapshot setup
 ```

@@ -516,9 +516,9 @@ git commit -m "feat: implement setup subcommand with launchd registration"
 ```ruby
 class BrewSnapshot < Formula
   desc "Snapshot and restore your Homebrew environment"
-  homepage "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot"
+  homepage "https://github.com/AndrewDongminYoo/homebrew-tap"
   # url과 sha256은 GitHub release 태그 생성 후 채운다
-  # url "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
+  # url "https://github.com/AndrewDongminYoo/homebrew-tap/archive/refs/tags/v0.1.0.tar.gz"
   # sha256 "..."
   version "0.1.0"
   license "MIT"
@@ -590,7 +590,7 @@ Snapshot and restore your Homebrew environment.
 ## Install
 
 ```bash
-brew tap AndrewDongminYoo/brew-snapshot
+brew tap AndrewDongminYoo/tap
 brew install brew-snapshot
 brew-snapshot setup
 ```
