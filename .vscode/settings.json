@@ -5,8 +5,10 @@
     "Justintime",
     "libexec",
     "LIBEXEC",
+    "mkpath",
     "pipefail",
     "regeneratable",
+    "testpath",
     "untap"
   ],
   "files.associations": {

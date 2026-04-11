@@ -31,7 +31,36 @@ class BrewSnapshot < Formula
   end
 
   test do
-    output = shell_output("#{bin}/brew-snapshot help")
-    assert_match "Usage: brew-snapshot", output
+    # help / --help / --version / unknown command
+    assert_match "Usage: brew-snapshot", shell_output("#{bin}/brew-snapshot help")
+    assert_match "Usage: brew-snapshot", shell_output("#{bin}/brew-snapshot --help")
+    assert_match "brew-snapshot",        shell_output("#{bin}/brew-snapshot --version")
+    assert_match "unknown command",      shell_output("#{bin}/brew-snapshot bogus 2>&1", 1)
+
+    # Use an isolated state directory so tests never touch the real home
+    ENV["BREW_SNAPSHOT_DIR"] = (testpath/"state").to_s
+
+    # status: state directory does not exist yet → guidance message, exit 0
+    assert_match "No snapshot found", shell_output("#{bin}/brew-snapshot status")
+
+    # status: populate mock state and verify each field is reported
+    snap = testpath/"state"
+    snap.mkpath
+    (snap/"last_snapshot_utc").write("2024-01-01T00:00:00Z")
+    (snap/"Brewfile").write("brew \"git\"\nbrew \"curl\"\n")
+    (snap/"Brewfile.taps").write("homebrew/cask\n")
+    status_out = shell_output("#{bin}/brew-snapshot status")
+    assert_match "2024-01-01T00:00:00Z", status_out
+    assert_match "Formulae:",            status_out
+    assert_match "Taps:",                status_out
+
+    # restore: Brewfile removed → exits 1 with error message
+    (snap/"Brewfile").unlink
+    assert_match "No Brewfile found", shell_output("#{bin}/brew-snapshot restore 2>&1", 1)
+
+    # restore: Brewfile present → command reaches brew-bundle (exits non-zero without
+    # a real Homebrew environment, but the "installing from" message confirms dispatch)
+    (snap/"Brewfile").write("")
+    assert_match "Installing from", shell_output("#{bin}/brew-snapshot restore 2>&1", 1)
   end
 end
