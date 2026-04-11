@@ -58,9 +58,9 @@ class BrewSnapshot < Formula
     (snap/"Brewfile").unlink
     assert_match "No Brewfile found", shell_output("#{bin}/brew-snapshot restore 2>&1", 1)
 
-    # restore: Brewfile present → command reaches brew-bundle (exits non-zero without
-    # a real Homebrew environment, but the "installing from" message confirms dispatch)
+    # restore: Brewfile present → "Installing from" message confirms dispatch to brew bundle
+    # brew bundle with an empty Brewfile exits 0 (nothing to install), so no exit code asserted
     (snap/"Brewfile").write("")
-    assert_match "Installing from", shell_output("#{bin}/brew-snapshot restore 2>&1", 1)
+    assert_match "Installing from", shell_output("#{bin}/brew-snapshot restore 2>&1")
   end
 end
