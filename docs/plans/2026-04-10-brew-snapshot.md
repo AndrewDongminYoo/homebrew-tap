@@ -634,8 +634,7 @@ previous version and use a versioned formula or `brew extract` if needed.
 - Pin all formulae with `brew pin`
 - Support non-macOS platforms
 
-````
-
+````markdown
 - [ ] **Step 2: CLAUDE.md 작성**
 
 `CLAUDE.md`:
@@ -673,6 +672,7 @@ All files are regeneratable by running `brew-snapshot snapshot`.
 
 `url` and `sha256` in `Formula/brew-snapshot.rb` are filled after each GitHub release tag.
 The `inreplace` block must be updated if the LIBEXEC_DIR detection logic in `bin/brew-snapshot` changes.
+```
 ````
 
 - [ ] **Step 3: 커밋**

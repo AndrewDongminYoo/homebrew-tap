@@ -24,14 +24,14 @@ brew-snapshot setup              # register launchd agent for login automation
 
 Stored in `~/.local/share/brew-snapshot/` (override: `$BREW_SNAPSHOT_DIR`):
 
-| File | Contents |
-|------|----------|
-| `Brewfile` | Reinstall manifest (`brew bundle`) |
-| `Brewfile.lock` | Full version history JSON |
-| `Brewfile.deps` | Dependency tree |
-| `Brewfile.taps` | Active taps |
-| `Brewfile.refs` | Tap git commit hashes |
-| `last_snapshot_utc` | Last snapshot timestamp |
+| File                | Contents                           |
+| ------------------- | ---------------------------------- |
+| `Brewfile`          | Reinstall manifest (`brew bundle`) |
+| `Brewfile.lock`     | Full version history JSON          |
+| `Brewfile.deps`     | Dependency tree                    |
+| `Brewfile.taps`     | Active taps                        |
+| `Brewfile.refs`     | Tap git commit hashes              |
+| `last_snapshot_utc` | Last snapshot timestamp            |
 
 ## Restore on a New Mac
 
