@@ -12,7 +12,8 @@ echo "State directory: ${STATE_DIR}"
 echo ""
 
 if [[ -f "${STATE_DIR}/last_snapshot_utc" ]]; then
-  echo "Last snapshot:  $(cat "${STATE_DIR}/last_snapshot_utc")"
+  last_snapshot="$(cat "${STATE_DIR}/last_snapshot_utc")"
+  echo "Last snapshot:  ${last_snapshot}"
 else
   echo "Last snapshot:  (none)"
 fi

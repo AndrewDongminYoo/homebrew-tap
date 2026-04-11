@@ -37,7 +37,8 @@ echo "→ Brewfile.refs"
 while IFS= read -r tap; do
   repo="$(brew --repository "${tap}" 2>/dev/null || true)"
   if [[ -n "${repo}" && -d "${repo}/.git" ]]; then
-    printf "%s %s\n" "${tap}" "$(git -C "${repo}" rev-parse HEAD)" >> "${STATE_DIR}/Brewfile.refs"
+    ref="$(git -C "${repo}" rev-parse HEAD)"
+    printf "%s %s\n" "${tap}" "${ref}" >> "${STATE_DIR}/Brewfile.refs"
   fi
 done < "${STATE_DIR}/Brewfile.taps"
 
