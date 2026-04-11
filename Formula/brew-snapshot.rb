@@ -2,9 +2,9 @@ class BrewSnapshot < Formula
   desc "Snapshot and restore your Homebrew environment"
   homepage "https://github.com/AndrewDongminYoo/homebrew-tap"
   # Stable: fill url + sha256 after creating a GitHub release tag
-  url "https://github.com/AndrewDongminYoo/homebrew-tap/archive/refs/tags/v0.3.4.tar.gz"
-  sha256 "80bc456d27edb87b5148471c2acba936a270b816e7de31c2546e24c8cd5007dd"
-  version "0.3.4"
+  url "https://github.com/AndrewDongminYoo/homebrew-tap/archive/refs/tags/v0.3.5.tar.gz"
+  sha256 "f573a9811815fce285406fc715ae2bd1796b3580a2af16c568f5f621a4c8c2ff"
+  version "0.3.5"
   license "MIT"
 
   head "https://github.com/AndrewDongminYoo/homebrew-tap.git", branch: "main"
