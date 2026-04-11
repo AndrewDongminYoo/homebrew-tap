@@ -1,16 +1,15 @@
-name: homebrew-releaser
+name: release
 
 on:
   push:
     tags:
-      - v[0-9]+.[0-9]+.[0-9]+
-
-permissions:
-  contents: read
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
   check-semver:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       should_release: ${{ steps.check.outputs.should_release }}
     steps:
@@ -26,19 +25,23 @@ jobs:
           HIGHER=$(printf '%s\n' "$TAG" "$LATEST" | sort -V | tail -n1)
           if [ "$HIGHER" = "$TAG" ] && [ "$TAG" != "$LATEST" ]; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "$TAG is higher than $LATEST — proceeding with release."
+            echo "$TAG is higher than $LATEST — proceeding."
           else
             echo "should_release=false" >> "$GITHUB_OUTPUT"
-            echo "$TAG is not higher than $LATEST — skipping release."
+            echo "$TAG is not higher than $LATEST — skipping."
           fi
 
-  create-release:
+  release:
     needs: check-semver
     if: needs.check-semver.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,52 +52,21 @@ jobs:
             --title "$TAG" \
             --generate-notes
 
-  homebrew-releaser:
-    needs: [check-semver, create-release]
-    if: needs.check-semver.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    name: Release to Homebrew tap
-    steps:
-      - name: Release brew-snapshot to Homebrew tap
-        uses: Justintime50/homebrew-releaser@v3.3.0
-        with:
-          # GitHub username that owns the tap repo
-          homebrew_owner: AndrewDongminYoo
-          # Tap repo name (must be homebrew-<name>)
-          homebrew_tap: homebrew-brew-snapshot
-          # Folder inside the tap repo where the formula lives
-          formula_folder: Formula
-          # PAT with `repo` scope — add as a repository secret named HOMEBREW_RELEASER_TOKEN
-          github_token: ${{ secrets.HOMEBREW_RELEASER_TOKEN }}
+      - name: Update formula url and sha256
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          TARBALL_URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
+          SHA256=$(curl -fsSL "$TARBALL_URL" | shasum -a 256 | awk '{print $1}')
 
-          commit_owner: github-actions[bot]
-          commit_email: 41898282+github-actions[bot]@users.noreply.github.com
+          sed -i \
+            -e "s|url \".*\"|url \"${TARBALL_URL}\"|" \
+            -e "s|sha256 \".*\"|sha256 \"${SHA256}\"|" \
+            -e "s|version \".*\"|version \"${VERSION}\"|" \
+            Formula/brew-snapshot.rb
 
-          # Ruby code for the install block
-          install: |
-            bin.install "bin/brew-snapshot"
-            (libexec/"commands").install Dir["libexec/commands/*"]
-            (share/"brew-snapshot").install "share/brew-snapshot.plist.template"
-            inreplace bin/"brew-snapshot",
-              %r{_self/\.\./libexec/commands},
-              "#{libexec}/commands"
-
-          # Extra Ruby methods injected into the generated formula.
-          # `caveats` is not a supported top-level input in v3.3.0, so it lives here.
-          formula_includes: |
-            def caveats
-              <<~EOS
-                Run setup to enable automatic snapshots on login:
-                  brew-snapshot setup
-
-                Default state directory: ~/.local/share/brew-snapshot/
-                Override:  export BREW_SNAPSHOT_DIR=/your/path
-              EOS
-            end
-
-          # Ruby code for the test block
-          test: |
-            output = shell_output("#{bin}/brew-snapshot help")
-            assert_match "Usage: brew-snapshot", output
-
-          skip_commit: false
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/brew-snapshot.rb
+          git commit -m "chore: bump formula to ${TAG}"
+          git push origin main
