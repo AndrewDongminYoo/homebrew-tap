@@ -16,7 +16,7 @@ class BrewSnapshot < Formula
 
     # Rewrite LIBEXEC_DIR in the entry point to the Homebrew prefix path
     inreplace bin/"brew-snapshot",
-      %r{\$_self/\.\./libexec/commands},
+      %r{\$\{_self\}/\.\./libexec/commands},
       "#{opt_libexec}/commands"
   end
 
