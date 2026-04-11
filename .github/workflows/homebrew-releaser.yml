@@ -13,7 +13,7 @@ jobs:
         uses: Justintime50/homebrew-releaser@v3.3.0
         with:
           # GitHub username that owns the tap repo
-          homebrew_owner: AndrewDongminYuu
+          homebrew_owner: AndrewDongminYoo
           # Tap repo name (must be homebrew-<name>)
           homebrew_tap: homebrew-brew-snapshot
           # Folder inside the tap repo where the formula lives

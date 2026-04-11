@@ -2,8 +2,8 @@ class BrewSnapshot < Formula
   desc "Snapshot and restore your Homebrew environment"
   homepage "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot"
   # Stable: fill url + sha256 after creating a GitHub release tag
-  url "https://github.com/AndrewDongminYu/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
+  url "https://github.com/AndrewDongminYoo/homebrew-brew-snapshot/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "6645f04e88fd5f117a891866cf82741c88502a396f9dc680dc8f57257b63d26e"
   version "0.1.0"
   license "MIT"
 
@@ -16,8 +16,8 @@ class BrewSnapshot < Formula
 
     # Rewrite LIBEXEC_DIR in the entry point to the Homebrew prefix path
     inreplace bin/"brew-snapshot",
-      %r{_self/\.\./libexec/commands},
-      "#{libexec}/commands"
+      %r{\$_self/\.\./libexec/commands},
+      "#{opt_libexec}/commands"
   end
 
   def caveats
