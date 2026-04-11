@@ -1,11 +1,57 @@
 name: homebrew-releaser
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+
+permissions:
+  contents: read
 
 jobs:
+  check-semver:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - name: Compare pushed tag with latest release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          LATEST=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q '.tagName' 2>/dev/null || echo "v0.0.0")
+          echo "Pushed tag:     $TAG"
+          echo "Latest release: $LATEST"
+          HIGHER=$(printf '%s\n' "$TAG" "$LATEST" | sort -V | tail -n1)
+          if [ "$HIGHER" = "$TAG" ] && [ "$TAG" != "$LATEST" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "$TAG is higher than $LATEST — proceeding with release."
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "$TAG is not higher than $LATEST — skipping release."
+          fi
+
+  create-release:
+    needs: check-semver
+    if: needs.check-semver.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --generate-notes
+
   homebrew-releaser:
+    needs: [check-semver, create-release]
+    if: needs.check-semver.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     name: Release to Homebrew tap
     steps:
@@ -24,7 +70,7 @@ jobs:
           commit_owner: github-actions[bot]
           commit_email: 41898282+github-actions[bot]@users.noreply.github.com
 
-          # Ruby code for the install block (homebrew-releaser wraps this automatically)
+          # Ruby code for the install block
           install: |
             bin.install "bin/brew-snapshot"
             (libexec/"commands").install Dir["libexec/commands/*"]
@@ -33,13 +79,18 @@ jobs:
               %r{_self/\.\./libexec/commands},
               "#{libexec}/commands"
 
-          # Text inside caveats heredoc (homebrew-releaser adds <<~EOS wrapper)
-          caveats: |
-            Run setup to enable automatic snapshots on login:
-              brew-snapshot setup
+          # Extra Ruby methods injected into the generated formula.
+          # `caveats` is not a supported top-level input in v3.3.0, so it lives here.
+          formula_includes: |
+            def caveats
+              <<~EOS
+                Run setup to enable automatic snapshots on login:
+                  brew-snapshot setup
 
-            Default state directory: ~/.local/share/brew-snapshot/
-            Override:  export BREW_SNAPSHOT_DIR=/your/path
+                Default state directory: ~/.local/share/brew-snapshot/
+                Override:  export BREW_SNAPSHOT_DIR=/your/path
+              EOS
+            end
 
           # Ruby code for the test block
           test: |
