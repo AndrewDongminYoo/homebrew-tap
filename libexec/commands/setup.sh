@@ -3,11 +3,16 @@ set -euo pipefail
 
 STATE_DIR="${BREW_SNAPSHOT_DIR:-${HOME}/.local/share/brew-snapshot}"
 
-# Find plist template: from share/ relative to this script
+# Find plist template.
+# Homebrew installs it under share/brew-snapshot/ (via `(share/"brew-snapshot").install`).
+# When running from the source repo the file sits directly under share/.
 _commands_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _share_dir="${_commands_dir}/../../share"
 
-PLIST_TEMPLATE="${_share_dir}/brew-snapshot.plist.template"
+PLIST_TEMPLATE="${_share_dir}/brew-snapshot/brew-snapshot.plist.template"
+if [[ ! -f "${PLIST_TEMPLATE}" ]]; then
+  PLIST_TEMPLATE="${_share_dir}/brew-snapshot.plist.template"
+fi
 
 if [[ ! -f "${PLIST_TEMPLATE}" ]]; then
   echo "Error: plist template not found at ${PLIST_TEMPLATE}" >&2
