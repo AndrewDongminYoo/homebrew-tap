@@ -111,37 +111,49 @@ _consolidate_alias() {
 
     if [[ "${total}" -eq 0 ]]; then
         echo "  no user-installed packages found across v${major}.x.x"
-        "${_self_dir}/snapshot.sh" "${lts_alias}"
-        return 0
+    else
+        echo "  ${total} unique package(s) found"
+
+        nvm use "lts/${lts_alias}" >/dev/null 2>&1
+        local target_modules="${NVM_DIR}/versions/node/v${latest_ver}/lib/node_modules"
+
+        local installed=0 skipped=0
+        while IFS="=" read -r pkg want_ver; do
+            [[ -z "${pkg}" ]] && continue
+
+            local current_ver=""
+            local pkg_json="${target_modules}/${pkg}/package.json"
+            if [[ -f "${pkg_json}" ]]; then
+                current_ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+            fi
+
+            if [[ "${current_ver}" == "${want_ver}" ]]; then
+                echo "  ✓ ${pkg}@${want_ver}"
+                skipped=$(( skipped + 1 ))
+            else
+                echo "  npm install -g ${pkg}@${want_ver}"
+                npm install -g "${pkg}@${want_ver}"
+                installed=$(( installed + 1 ))
+            fi
+        done < <(printf '%s' "${merged_json}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' || true)
+
+        echo "  installed: ${installed}, already present: ${skipped}"
     fi
 
-    echo "  ${total} unique package(s) found"
-
-    nvm use "lts/${lts_alias}" >/dev/null 2>&1
-    local target_modules="${NVM_DIR}/versions/node/v${latest_ver}/lib/node_modules"
-
-    local installed=0 skipped=0
-    while IFS="=" read -r pkg want_ver; do
-        [[ -z "${pkg}" ]] && continue
-
-        local current_ver=""
-        local pkg_json="${target_modules}/${pkg}/package.json"
-        if [[ -f "${pkg_json}" ]]; then
-            current_ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
-        fi
-
-        if [[ "${current_ver}" == "${want_ver}" ]]; then
-            echo "  ✓ ${pkg}@${want_ver}"
-            skipped=$(( skipped + 1 ))
-        else
-            echo "  npm install -g ${pkg}@${want_ver}"
-            npm install -g "${pkg}@${want_ver}"
-            installed=$(( installed + 1 ))
-        fi
-    done < <(printf '%s' "${merged_json}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' || true)
-
-    echo "  installed: ${installed}, already present: ${skipped}"
     "${_self_dir}/snapshot.sh" "${lts_alias}"
+
+    # Uninstall all patch versions except the latest
+    local removed=0
+    for patch_dir in "${patch_dirs[@]}"; do
+        local patch_ver
+        patch_ver="$(basename "${patch_dir}" | tr -d 'v')"
+        [[ "${patch_ver}" == "${latest_ver}" ]] && continue
+        echo "  nvm uninstall v${patch_ver}"
+        nvm uninstall "v${patch_ver}" 2>/dev/null || \
+            echo "  ⚠ failed to uninstall v${patch_ver}" >&2
+        removed=$(( removed + 1 ))
+    done
+    [[ "${removed}" -gt 0 ]] && echo "  removed ${removed} old version(s)"
 }
 
 _ensure_config
