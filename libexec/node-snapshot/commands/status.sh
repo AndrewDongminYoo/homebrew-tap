@@ -53,4 +53,4 @@ while IFS= read -r alias; do
     fi
 
     printf "%-12s %-14s %-16s %s\n" "${alias}" "${installed}" "${lock_version}" "${status}"
-done < <(jq -r '.tracked[]' "${STATE_DIR}/config.json")
+done < <(jq -r '.tracked[]' "${STATE_DIR}/config.json" 2>/dev/null || true)
