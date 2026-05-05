@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NODE_SNAPSHOT_VERSION="0.1.0"
+export NODE_SNAPSHOT_DIR="${NODE_SNAPSHOT_DIR:-${HOME}/.local/share/node-snapshot}"
+
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIBEXEC_DIR="${_self}/../libexec/node-snapshot/commands"
+
+cmd="${1:-help}"
+shift 2>/dev/null || true
+
+case "${cmd}" in
+  init)     exec "${LIBEXEC_DIR}/init.sh"     "$@" ;;
+  snapshot) exec "${LIBEXEC_DIR}/snapshot.sh" "$@" ;;
+  upgrade)  exec "${LIBEXEC_DIR}/upgrade.sh"  "$@" ;;
+  migrate)  exec "${LIBEXEC_DIR}/migrate.sh"  "$@" ;;
+  status)   exec "${LIBEXEC_DIR}/status.sh"   "$@" ;;
+  --version | -V)
+    echo "node-snapshot ${NODE_SNAPSHOT_VERSION}"
+    ;;
+  help | --help | -h | "")
+    echo "Usage: node-snapshot <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  init                   Output shell integration (add: source <(node-snapshot init))"
+    echo "  snapshot [alias]       Save global packages for tracked LTS versions"
+    echo "  upgrade [alias]        Update LTS to latest and migrate packages"
+    echo "  upgrade --check        Check for updates without installing"
+    echo "  migrate <from> <to>    Copy packages from one LTS alias to another"
+    echo "  status                 Show tracked versions and lock file state"
+    echo ""
+    echo "State directory: ${NODE_SNAPSHOT_DIR}"
+    ;;
+  *)
+    echo "node-snapshot: unknown command '${cmd}'" >&2
+    echo "Run 'node-snapshot help' for usage." >&2
+    exit 1
+    ;;
+esac
