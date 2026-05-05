@@ -61,14 +61,16 @@ jobs:
           TARBALL_URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
           SHA256=$(curl -fsSL "$TARBALL_URL" | shasum -a 256 | awk '{print $1}')
 
-          sed -i \
-            -e "s|url \".*\"|url \"${TARBALL_URL}\"|" \
-            -e "s|sha256 \".*\"|sha256 \"${SHA256}\"|" \
-            -e "s|version \".*\"|version \"${VERSION}\"|" \
-            Formula/brew-snapshot.rb
+          for formula in Formula/brew-snapshot.rb Formula/node-snapshot.rb; do
+            sed -i \
+              -e "s|url \".*\"|url \"${TARBALL_URL}\"|" \
+              -e "s|sha256 \".*\"|sha256 \"${SHA256}\"|" \
+              -e "s|version \".*\"|version \"${VERSION}\"|" \
+              "$formula"
+          done
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/brew-snapshot.rb
-          git commit -m "chore: bump formula to ${TAG}"
+          git add Formula/brew-snapshot.rb Formula/node-snapshot.rb
+          git commit -m "chore: bump formulas to ${TAG}"
           git push origin main
