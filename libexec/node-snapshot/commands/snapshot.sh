@@ -52,6 +52,7 @@ if [[ -n "${alias_arg}" ]]; then
     _snapshot_alias "${alias_arg}"
 else
     while IFS= read -r lts_alias; do
+        # shellcheck disable=SC2310
         ( _snapshot_alias "${lts_alias}" ) || \
             echo "⚠ lts/${lts_alias}: snapshot failed (alias not installed?)" >&2
     done < <(jq -r '.tracked[]' "${STATE_DIR}/config.json" 2>/dev/null || true)
