@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../../bin/node-snapshot"
 TMPDIR_STATE="$(mktemp -d)"
+trap 'rm -rf "${TMPDIR_STATE}"' EXIT
 export NODE_SNAPSHOT_DIR="${TMPDIR_STATE}"
 
 _pass() { printf '\033[32m✓\033[0m %s\n' "$1"; }
@@ -47,5 +48,4 @@ _assert_match "${output}" "add-zsh-hook"
 _assert_match "${output}" "node-snapshot upgrade --check"
 _pass "init: emits chpwd function and hook registration"
 
-rm -rf "${TMPDIR_STATE}"
 echo ""; echo "All unit tests: PASS"

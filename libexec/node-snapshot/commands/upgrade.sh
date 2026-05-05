@@ -48,7 +48,7 @@ _check_mode() {
     while IFS= read -r lts_alias; do
         local remote_latest local_version
         remote_latest="$(nvm ls-remote "lts/${lts_alias}" --no-colors 2>/dev/null \
-            | grep 'Latest LTS' | grep -o 'v[0-9.]*' | head -1 || echo '')"
+            | grep -o 'v[0-9.]*' | tail -1 || echo '')"
         local_version="$(nvm ls "lts/${lts_alias}" --no-colors 2>/dev/null \
             | grep -v 'N/A' | grep -o 'v[0-9.]*' | head -1 || echo '')"
 
