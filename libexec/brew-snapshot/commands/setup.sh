@@ -7,7 +7,7 @@ STATE_DIR="${BREW_SNAPSHOT_DIR:-${HOME}/.local/share/brew-snapshot}"
 # Homebrew installs it under share/brew-snapshot/ (via `(share/"brew-snapshot").install`).
 # When running from the source repo the file sits directly under share/.
 _commands_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-_share_dir="${_commands_dir}/../../share"
+_share_dir="${_commands_dir}/../../../share"
 
 PLIST_TEMPLATE="${_share_dir}/brew-snapshot/brew-snapshot.plist.template"
 if [[ ! -f "${PLIST_TEMPLATE}" ]]; then
@@ -20,7 +20,7 @@ if [[ ! -f "${PLIST_TEMPLATE}" ]]; then
 fi
 
 PLIST_DEST="${HOME}/Library/LaunchAgents/com.${USER}.brew-snapshot.plist"
-BREW_SNAPSHOT_BIN="$(command -v brew-snapshot || echo "${_commands_dir}/../../bin/brew-snapshot")"
+BREW_SNAPSHOT_BIN="$(command -v brew-snapshot || echo "${_commands_dir}/../../../bin/brew-snapshot")"
 
 mkdir -p "${HOME}/Library/LaunchAgents"
 

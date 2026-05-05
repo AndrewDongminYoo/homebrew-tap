@@ -11,13 +11,13 @@ class BrewSnapshot < Formula
 
   def install
     bin.install "bin/brew-snapshot"
-    (libexec/"commands").install Dir["libexec/commands/*"]
+    (libexec/"brew-snapshot"/"commands").install Dir["libexec/brew-snapshot/commands/*"]
     (share/"brew-snapshot").install "share/brew-snapshot.plist.template"
 
     # Rewrite LIBEXEC_DIR in the entry point to the Homebrew prefix path
     inreplace bin/"brew-snapshot",
-      %r{\$\{_self\}/\.\./libexec/commands},
-      "#{opt_libexec}/commands"
+      %r{\$\{_self\}/\.\./libexec/brew-snapshot/commands},
+      "#{opt_libexec}/brew-snapshot/commands"
   end
 
   def caveats

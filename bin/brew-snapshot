@@ -7,7 +7,7 @@ export BREW_SNAPSHOT_DIR="${BREW_SNAPSHOT_DIR:-${HOME}/.local/share/brew-snapsho
 # libexec location: Homebrew install → $(brew --prefix)/libexec/brew-snapshot/commands
 # Local dev → relative to this script
 _self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIBEXEC_DIR="${_self}/../libexec/commands"
+LIBEXEC_DIR="${_self}/../libexec/brew-snapshot/commands"
 
 cmd="${1:-help}"
 shift 2>/dev/null || true
