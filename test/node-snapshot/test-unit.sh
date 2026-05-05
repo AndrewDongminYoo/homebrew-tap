@@ -40,5 +40,12 @@ _assert_match "${output}" "State directory:"
 _assert_match "${output}" "iron"
 _pass "status: config present → shows alias"
 
+# ── init ─────────────────────────────────────────────────────────────────────
+output="$("${BIN}" init)"
+_assert_match "${output}" "_node_snapshot_chpwd"
+_assert_match "${output}" "add-zsh-hook"
+_assert_match "${output}" "node-snapshot upgrade --check"
+_pass "init: emits chpwd function and hook registration"
+
 rm -rf "${TMPDIR_STATE}"
 echo ""; echo "All unit tests: PASS"
