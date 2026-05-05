@@ -1,18 +1,23 @@
 {
   "cSpell.words": [
+    "agentic",
+    "argjson",
+    "chpwd",
     "Dongmin",
+    "esac",
     "inreplace",
     "Justintime",
-    "libexec",
     "LIBEXEC",
     "mkpath",
+    "mktemp",
     "pipefail",
     "regeneratable",
+    "shellcheck",
     "testpath",
     "untap"
   ],
   "files.associations": {
-    "bin/brew-snapshot": "shellscript",
+    "bin/*-snapshot": "shellscript",
     "share/brew-snapshot.plist.template": "xml"
   }
 }
