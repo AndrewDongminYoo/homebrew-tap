@@ -24,9 +24,10 @@ _ensure_config() {
 }
 
 _update_last_check() {
-    local tmp
+    local tmp now
     tmp="$(mktemp)"
-    jq --arg now "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" '.last_check_utc = $now' \
+    now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    jq --arg now "${now}" '.last_check_utc = $now' \
         "${STATE_DIR}/config.json" > "${tmp}"
     mv "${tmp}" "${STATE_DIR}/config.json"
 }

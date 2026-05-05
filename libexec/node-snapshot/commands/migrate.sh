@@ -39,6 +39,6 @@ while IFS="=" read -r pkg version; do
     [[ -z "${pkg}" ]] && continue
     echo "  npm install -g ${pkg}@${version}"
     npm install -g "${pkg}@${version}"
-done < <(jq -r '.packages | to_entries[] | "\(.key)=\(.value)"' "${lock_file}")
+done < <(jq -r '.packages | to_entries[] | "\(.key)=\(.value)"' "${lock_file}" || true)
 
 "${_self_dir}/snapshot.sh" "${to}"
