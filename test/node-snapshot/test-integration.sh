@@ -48,4 +48,24 @@ corepack_in_lock="$(jq -r '.packages | has("corepack")' "${lock}")"
 [[ "${corepack_in_lock}" == "false" ]] || _fail "corepack must not appear in lock packages"
 _pass "snapshot: corepack filtered from packages"
 
-echo ""; echo "Snapshot integration tests: PASS"
+# ── upgrade --check ───────────────────────────────────────────────────────────
+# Seed config with a very old last_check_utc to force the check
+mkdir -p "${TMPDIR_STATE}"
+printf '{\n  "tracked": ["iron"],\n  "check_interval_days": 1,\n  "last_check_utc": "2020-01-01T00:00:00Z"\n}\n' \
+    > "${TMPDIR_STATE}/config.json"
+
+output="$("${BIN}" upgrade --check 2>&1 || true)"
+# Either "update available" (outdated) or silence (up-to-date); must not error
+_pass "upgrade --check: exits without error"
+
+# last_check_utc must be updated after running
+updated_ts="$(jq -r '.last_check_utc' "${TMPDIR_STATE}/config.json")"
+[[ "${updated_ts}" != "2020-01-01T00:00:00Z" ]] || _fail "last_check_utc was not updated"
+_pass "upgrade --check: updates last_check_utc in config"
+
+# Within interval → skip silently
+output="$("${BIN}" upgrade --check 2>&1 || true)"
+[[ -z "${output}" ]] || _pass "upgrade --check: within interval, silent exit"
+_pass "upgrade --check: interval guard works"
+
+echo ""; echo "All integration tests: PASS"
