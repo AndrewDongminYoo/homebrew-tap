@@ -65,7 +65,7 @@ _pass "upgrade --check: updates last_check_utc in config"
 
 # Within interval → skip silently
 output="$("${BIN}" upgrade --check 2>&1 || true)"
-[[ -z "${output}" ]] || _pass "upgrade --check: within interval, silent exit"
+[[ -z "${output}" ]] || _fail "upgrade --check: within interval should produce no output, got: ${output}"
 _pass "upgrade --check: interval guard works"
 
 echo ""; echo "All integration tests: PASS"
