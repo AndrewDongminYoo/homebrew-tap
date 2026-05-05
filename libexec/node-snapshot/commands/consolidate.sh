@@ -79,7 +79,7 @@ _consolidate_alias() {
     local -a patch_dirs=()
     while IFS= read -r d; do
         [[ -d "${d}" ]] && patch_dirs+=("${d}")
-    done < <(find "${NVM_DIR}/versions/node" -maxdepth 1 -name "v${major}.*" -type d 2>/dev/null | sort -V)
+    done < <(find "${NVM_DIR}/versions/node" -maxdepth 1 -name "v${major}.*" -type d 2>/dev/null | sort -V || true)
 
     if [[ ${#patch_dirs[@]} -eq 0 ]]; then
         echo "  ⚠ no v${major}.x.x installs found" >&2
@@ -138,7 +138,7 @@ _consolidate_alias() {
             npm install -g "${pkg}@${want_ver}"
             installed=$(( installed + 1 ))
         fi
-    done < <(printf '%s' "${merged_json}" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+    done < <(printf '%s' "${merged_json}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' || true)
 
     echo "  installed: ${installed}, already present: ${skipped}"
     "${_self_dir}/snapshot.sh" "${lts_alias}"
