@@ -4,29 +4,72 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Purpose
 
-A Homebrew tap providing the `brew-snapshot` CLI tool. Distributes shell scripts
-via `brew install`; no build system or tests beyond the formula `test do` block.
+A Homebrew tap providing two CLI tools distributed as shell scripts:
+
+- **`brew-snapshot`** — snapshot and restore Homebrew environments
+- **`node-snapshot`** — manage nvm LTS versions and global npm packages
+
+## Common Commands
+
+```bash
+# Lint all scripts (zero warnings required before committing)
+shellcheck bin/brew-snapshot bin/node-snapshot libexec/brew-snapshot/commands/*.sh libexec/node-snapshot/commands/*.sh
+
+# Run unit tests
+bash test/brew-snapshot/test-unit.sh
+bash test/node-snapshot/test-unit.sh
+
+# Run integration tests (require brew / nvm installed)
+bash test/brew-snapshot/test-integration.sh
+bash test/node-snapshot/test-integration.sh
+
+# Run with Trunk (covers shellcheck, markdownlint, yamllint, actionlint)
+trunk check
+trunk fmt
+```
 
 ## Architecture
 
-`bin/brew-snapshot` dispatches to `libexec/commands/*.sh` via `exec`. Each subcommand
-script is self-contained and reads `$BREW_SNAPSHOT_DIR` for the state path.
+Both tools share the same dispatch pattern: `bin/<tool>` reads `$1` and `exec`s into the corresponding subcommand script.
 
-The formula's `inreplace` step rewrites the LIBEXEC_DIR path at install time so the
-dispatch works correctly from the Homebrew prefix.
+### brew-snapshot
 
-## State Directory
+- Dispatcher: `bin/brew-snapshot` → `libexec/brew-snapshot/commands/<cmd>.sh`
+- State env var: `$BREW_SNAPSHOT_DIR` (default `~/.local/share/brew-snapshot/`)
+- Formula: `Formula/brew-snapshot.rb`
 
-`~/.local/share/brew-snapshot/` — plain data folder, never a git repo.
-All files are regeneratable by running `brew-snapshot snapshot`.
+### node-snapshot
+
+- Dispatcher: `bin/node-snapshot` → `libexec/node-snapshot/commands/<cmd>.sh`
+- State env var: `$NODE_SNAPSHOT_DIR` (default `~/.local/share/node-snapshot/`)
+- Config file: `$NODE_SNAPSHOT_DIR/config.json` — JSON with `tracked`, `check_interval_days`, `last_check_utc`
+- Formula: `Formula/node-snapshot.rb` (depends on `jq`)
+
+### Formula `inreplace`
+
+Each formula rewrites the `LIBEXEC_DIR` literal in its entry-point binary at install time to use the Homebrew prefix. If the LIBEXEC_DIR detection logic in a `bin/` script changes, update the corresponding `inreplace` regex in the formula.
 
 ## Adding a Subcommand
 
-1. Create `libexec/commands/<name>.sh` with `#!/usr/bin/env bash` and `set -euo pipefail`
+**To brew-snapshot:**
+
+1. Create `libexec/brew-snapshot/commands/<name>.sh` with `#!/usr/bin/env bash` and `set -euo pipefail`
 2. Add a `<name>)` case to `bin/brew-snapshot`
-3. Add a line to the help text in `bin/brew-snapshot`
+3. Add a help line in `bin/brew-snapshot`
+4. Add a test case in `test/brew-snapshot/test-unit.sh`
 
-## Formula Maintenance
+**To node-snapshot:**
 
-`url` and `sha256` in `Formula/brew-snapshot.rb` are filled after each GitHub release tag.
-The `inreplace` block must be updated if the LIBEXEC_DIR detection logic in `bin/brew-snapshot` changes.
+1. Create `libexec/node-snapshot/commands/<name>.sh`
+2. Add a `<name>)` case to `bin/node-snapshot`
+3. Add a help line in `bin/node-snapshot`
+4. Add a test case in `test/node-snapshot/test-unit.sh`
+
+## Release Process
+
+Pushing a semver tag (e.g. `v0.4.0`) triggers `.github/workflows/homebrew-releaser.yml`, which:
+
+1. Creates the GitHub release with auto-generated notes
+2. **Automatically** updates `url`, `sha256`, and `version` in `Formula/brew-snapshot.rb`
+
+`Formula/node-snapshot.rb` is **not** updated by the workflow — update `url`, `sha256`, and `version` there manually before tagging, or push a follow-up commit.
