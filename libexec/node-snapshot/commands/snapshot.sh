@@ -23,26 +23,26 @@ _ensure_config() {
 }
 
 _snapshot_alias() {
-    local alias="$1"
-    echo "→ nvm use lts/${alias}"
-    nvm use "lts/${alias}" >/dev/null 2>&1
+    local lts_alias="$1"
+    echo "→ nvm use lts/${lts_alias}"
+    nvm use "lts/${lts_alias}" >/dev/null 2>&1
 
     local packages_json node_version now lock_file
     packages_json="$(npm list -g --depth=0 --json 2>/dev/null \
         | jq '.dependencies // {} | del(.npm) | del(.corepack) | to_entries | map({key: .key, value: .value.version}) | from_entries')"
     node_version="$(node -v | tr -d 'v')"
     now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-    lock_file="${STATE_DIR}/lts-${alias}.lock.json"
+    lock_file="${STATE_DIR}/lts-${lts_alias}.lock.json"
 
     jq -n \
-        --arg lts_alias   "${alias}" \
+        --arg lts_alias   "${lts_alias}" \
         --arg node_version "${node_version}" \
         --arg snapshot_utc "${now}" \
         --argjson packages  "${packages_json}" \
         '{lts_alias: $lts_alias, node_version: $node_version, snapshot_utc: $snapshot_utc, packages: $packages}' \
         > "${lock_file}"
 
-    echo "✓ lts/${alias} (${node_version}) → ${lock_file}"
+    echo "✓ lts/${lts_alias} (${node_version}) → ${lock_file}"
 }
 
 _ensure_config
@@ -51,8 +51,8 @@ alias_arg="${1:-}"
 if [[ -n "${alias_arg}" ]]; then
     _snapshot_alias "${alias_arg}"
 else
-    while IFS= read -r alias; do
-        _snapshot_alias "${alias}"
+    while IFS= read -r lts_alias; do
+        _snapshot_alias "${lts_alias}"
     done < <(jq -r '.tracked[]' "${STATE_DIR}/config.json" 2>/dev/null || true)
 fi
 

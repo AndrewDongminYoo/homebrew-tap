@@ -6,6 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${SCRIPT_DIR}/../../bin/node-snapshot"
 TMPDIR_STATE="$(mktemp -d)"
+trap 'rm -rf "${TMPDIR_STATE}"' EXIT
 export NODE_SNAPSHOT_DIR="${TMPDIR_STATE}"
 
 _pass() { printf '\033[32m✓\033[0m %s\n' "$1"; }
@@ -42,5 +43,9 @@ npm_in_lock="$(jq -r '.packages | has("npm")' "${lock}")"
 [[ "${npm_in_lock}" == "false" ]] || _fail "npm must not appear in lock packages"
 _pass "snapshot: npm filtered from packages"
 
-rm -rf "${TMPDIR_STATE}"
+# corepack must not appear in packages
+corepack_in_lock="$(jq -r '.packages | has("corepack")' "${lock}")"
+[[ "${corepack_in_lock}" == "false" ]] || _fail "corepack must not appear in lock packages"
+_pass "snapshot: corepack filtered from packages"
+
 echo ""; echo "Snapshot integration tests: PASS"
