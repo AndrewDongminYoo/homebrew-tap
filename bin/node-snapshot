@@ -11,11 +11,12 @@ cmd="${1:-help}"
 shift 2>/dev/null || true
 
 case "${cmd}" in
-  init)     exec "${LIBEXEC_DIR}/init.sh"     "$@" ;;
-  snapshot) exec "${LIBEXEC_DIR}/snapshot.sh" "$@" ;;
-  upgrade)  exec "${LIBEXEC_DIR}/upgrade.sh"  "$@" ;;
-  migrate)  exec "${LIBEXEC_DIR}/migrate.sh"  "$@" ;;
-  status)   exec "${LIBEXEC_DIR}/status.sh"   "$@" ;;
+  init)        exec "${LIBEXEC_DIR}/init.sh"        "$@" ;;
+  snapshot)    exec "${LIBEXEC_DIR}/snapshot.sh"    "$@" ;;
+  upgrade)     exec "${LIBEXEC_DIR}/upgrade.sh"     "$@" ;;
+  migrate)     exec "${LIBEXEC_DIR}/migrate.sh"     "$@" ;;
+  consolidate) exec "${LIBEXEC_DIR}/consolidate.sh" "$@" ;;
+  status)      exec "${LIBEXEC_DIR}/status.sh"      "$@" ;;
   --version | -V)
     echo "node-snapshot ${NODE_SNAPSHOT_VERSION}"
     ;;
@@ -28,6 +29,7 @@ case "${cmd}" in
     echo "  upgrade [alias]        Update LTS to latest and migrate packages"
     echo "  upgrade --check        Check for updates without installing"
     echo "  migrate <from> <to>    Copy packages from one LTS alias to another"
+    echo "  consolidate [alias]    Merge packages across all patch versions into the latest"
     echo "  status                 Show tracked versions and lock file state"
     echo ""
     echo "State directory: ${NODE_SNAPSHOT_DIR}"

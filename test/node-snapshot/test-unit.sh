@@ -28,6 +28,10 @@ output="$("${BIN}" bogus 2>&1 || true)"
 _assert_match "${output}" "unknown command"
 _pass "unknown command exits 1"
 
+output="$("${BIN}" help)"
+_assert_match "${output}" "consolidate"
+_pass "help: consolidate command listed"
+
 # ── status ───────────────────────────────────────────────────────────────────
 output="$("${BIN}" status)"
 _assert_match "${output}" "No snapshot found"
