@@ -24,6 +24,7 @@ brew-snapshot/
 │           ├── snapshot.sh        ← saves global packages per LTS alias to lock file
 │           ├── upgrade.sh         ← installs latest LTS + migrates + re-snapshots
 │           ├── migrate.sh         ← copies packages from one alias to another
+│           ├── consolidate.sh     ← merges packages across all patch versions into latest
 │           └── status.sh          ← shows tracked versions, lock state, last check
 ├── Formula/
 │   ├── brew-snapshot.rb           (existing)
@@ -225,6 +226,19 @@ Without `--check` (interactive):
 3. `npm install -g <name>@<version>` for each package.
 4. Run `snapshot <to>`
 
+### `node-snapshot consolidate [alias]`
+
+Solves the problem where successive patch-version installs (e.g. v22.21.1 → v22.22.0 → v22.22.2) accumulate packages only in the version where they were originally installed. The latest patch often ends up the most bare.
+
+For each tracked alias (or the specified one):
+
+1. Read `~/.nvm/alias/lts/<alias>` to determine the major (e.g. `20`) and the current target version.
+2. Find all installed directories matching `~/.nvm/versions/node/v<major>.*` and sort them oldest → newest via `sort -V`.
+3. For each patch version, scan `lib/node_modules/` directly from disk (no nvm activation). Handle `@scope/pkg` subdirectory layout. Exclude `npm` and `corepack`.
+4. Merge the package list: when the same package appears in multiple patch versions, the newest patch version's version wins.
+5. `nvm use lts/<alias>`, then `npm install -g <pkg>@<ver>` for any package not already present at the target version.
+6. Run `snapshot <alias>` to update the lock file.
+
 ### `node-snapshot status`
 
 Prints a table:
@@ -259,11 +273,12 @@ cmd="${1:-help}"
 shift 2>/dev/null || true
 
 case "${cmd}" in
-  init)     exec "${LIBEXEC_DIR}/init.sh"     "$@" ;;
-  snapshot) exec "${LIBEXEC_DIR}/snapshot.sh" "$@" ;;
-  upgrade)  exec "${LIBEXEC_DIR}/upgrade.sh"  "$@" ;;
-  migrate)  exec "${LIBEXEC_DIR}/migrate.sh"  "$@" ;;
-  status)   exec "${LIBEXEC_DIR}/status.sh"   "$@" ;;
+  init)        exec "${LIBEXEC_DIR}/init.sh"        "$@" ;;
+  snapshot)    exec "${LIBEXEC_DIR}/snapshot.sh"    "$@" ;;
+  upgrade)     exec "${LIBEXEC_DIR}/upgrade.sh"     "$@" ;;
+  migrate)     exec "${LIBEXEC_DIR}/migrate.sh"     "$@" ;;
+  consolidate) exec "${LIBEXEC_DIR}/consolidate.sh" "$@" ;;
+  status)      exec "${LIBEXEC_DIR}/status.sh"      "$@" ;;
   --version|-V)
     echo "node-snapshot ${NODE_SNAPSHOT_VERSION}"
     ;;
@@ -276,6 +291,7 @@ case "${cmd}" in
     echo "  upgrade [alias]        Update LTS to latest and migrate packages"
     echo "  upgrade --check        Check for updates without installing"
     echo "  migrate <from> <to>    Copy packages from one LTS alias to another"
+    echo "  consolidate [alias]    Merge packages across all patch versions into the latest"
     echo "  status                 Show tracked versions and lock file state"
     echo ""
     echo "State directory: ${NODE_SNAPSHOT_DIR}"

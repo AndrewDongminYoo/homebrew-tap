@@ -12,16 +12,17 @@
 
 ## File Map
 
-| Action | Path                                         | Responsibility                                       |
-| ------ | -------------------------------------------- | ---------------------------------------------------- |
-| Create | `bin/node-snapshot`                          | Dispatcher — routes subcommands to libexec           |
-| Create | `libexec/node-snapshot/commands/init.sh`     | Emits zsh shell function definitions to stdout       |
-| Create | `libexec/node-snapshot/commands/status.sh`   | Shows tracked versions, lock state, last check       |
-| Create | `libexec/node-snapshot/commands/snapshot.sh` | Writes `lts-<alias>.lock.json` from live npm globals |
-| Create | `libexec/node-snapshot/commands/upgrade.sh`  | Installs latest LTS; `--check` emits update notices  |
-| Create | `libexec/node-snapshot/commands/migrate.sh`  | Reinstalls lock packages into a different alias      |
-| Create | `Formula/node-snapshot.rb`                   | Homebrew formula with `test do` block                |
-| Create | `test/node-snapshot/test-unit.sh`            | Unit tests runnable without nvm                      |
+| Action | Path                                            | Responsibility                                                |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------- |
+| Create | `bin/node-snapshot`                             | Dispatcher — routes subcommands to libexec                    |
+| Create | `libexec/node-snapshot/commands/init.sh`        | Emits zsh shell function definitions to stdout                |
+| Create | `libexec/node-snapshot/commands/status.sh`      | Shows tracked versions, lock state, last check                |
+| Create | `libexec/node-snapshot/commands/snapshot.sh`    | Writes `lts-<alias>.lock.json` from live npm globals          |
+| Create | `libexec/node-snapshot/commands/upgrade.sh`     | Installs latest LTS; `--check` emits update notices           |
+| Create | `libexec/node-snapshot/commands/migrate.sh`     | Reinstalls lock packages into a different alias               |
+| Create | `libexec/node-snapshot/commands/consolidate.sh` | Merges packages across all patch versions into the latest LTS |
+| Create | `Formula/node-snapshot.rb`                      | Homebrew formula with `test do` block                         |
+| Create | `test/node-snapshot/test-unit.sh`               | Unit tests runnable without nvm                               |
 
 ---
 
