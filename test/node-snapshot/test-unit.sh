@@ -27,5 +27,18 @@ output="$("${BIN}" bogus 2>&1 || true)"
 _assert_match "${output}" "unknown command"
 _pass "unknown command exits 1"
 
+# ── status ───────────────────────────────────────────────────────────────────
+output="$("${BIN}" status)"
+_assert_match "${output}" "No snapshot found"
+_pass "status: no config → guidance message"
+
+mkdir -p "${TMPDIR_STATE}"
+printf '{\n  "tracked": ["iron"],\n  "check_interval_days": 7,\n  "last_check_utc": ""\n}\n' \
+    > "${TMPDIR_STATE}/config.json"
+output="$("${BIN}" status)"
+_assert_match "${output}" "State directory:"
+_assert_match "${output}" "iron"
+_pass "status: config present → shows alias"
+
 rm -rf "${TMPDIR_STATE}"
-echo ""; echo "Dispatcher tests: PASS"
+echo ""; echo "All unit tests: PASS"
