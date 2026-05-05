@@ -68,4 +68,32 @@ output="$("${BIN}" upgrade --check 2>&1 || true)"
 [[ -z "${output}" ]] || _fail "upgrade --check: within interval should produce no output, got: ${output}"
 _pass "upgrade --check: interval guard works"
 
+# ── migrate ───────────────────────────────────────────────────────────────────
+# Seed a lock file for iron with a known package list
+rm -rf "${TMPDIR_STATE}"
+TMPDIR_STATE="$(mktemp -d)"
+export NODE_SNAPSHOT_DIR="${TMPDIR_STATE}"
+mkdir -p "${TMPDIR_STATE}"
+printf '{\n  "tracked": ["iron", "jod"],\n  "check_interval_days": 7,\n  "last_check_utc": ""\n}\n' \
+    > "${TMPDIR_STATE}/config.json"
+printf '{"lts_alias":"iron","node_version":"20.19.1","snapshot_utc":"2026-05-05T00:00:00Z","packages":{}}\n' \
+    > "${TMPDIR_STATE}/lts-iron.lock.json"
+
+# migrate with empty packages should succeed and produce a jod lock file
+output="$("${BIN}" migrate iron jod 2>&1)"
+_assert_match "${output}" "✓ Snapshot complete"
+_pass "migrate: exits successfully"
+_assert_file "${TMPDIR_STATE}/lts-jod.lock.json"
+_pass "migrate: creates destination lock file"
+
+# missing from-lock exits with error
+output="$("${BIN}" migrate hydrogen jod 2>&1 || true)"
+_assert_match "${output}" "error:"
+_pass "migrate: missing from-lock exits with error"
+
+# missing args exits with error
+output="$("${BIN}" migrate 2>&1 || true)"
+_assert_match "${output}" "Usage:"
+_pass "migrate: missing args shows usage"
+
 echo ""; echo "All integration tests: PASS"
