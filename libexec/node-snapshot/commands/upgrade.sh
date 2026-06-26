@@ -71,8 +71,24 @@ _upgrade_alias() {
         old_node_version="$(jq -r '.node_version // ""' "${lock_file}" 2>/dev/null || echo '')"
     fi
 
-    echo "→ nvm install lts/${lts_alias} --latest-npm"
-    nvm install "lts/${lts_alias}" --latest-npm
+    # Resolve the target version before installing so the reinstall flag is only
+    # added on an actual version bump — nvm exits non-zero when asked to
+    # reinstall packages from the same version it is installing.
+    local target_version
+    target_version="$(nvm version-remote "lts/${lts_alias}" 2>/dev/null | tr -d 'v' || echo '')"
+
+    # Carry global packages forward at install time. Without
+    # --reinstall-packages-from, the new Node version is installed with an empty
+    # global set; a snapshot taken in that window would overwrite the lock with
+    # an empty package list (see snapshot.sh — live state always wins).
+    if [[ -n "${old_node_version}" ]] && [[ -n "${target_version}" ]] \
+        && [[ "${old_node_version}" != "${target_version}" ]]; then
+        echo "→ nvm install lts/${lts_alias} --latest-npm --reinstall-packages-from=${old_node_version}"
+        nvm install "lts/${lts_alias}" --latest-npm --reinstall-packages-from="${old_node_version}"
+    else
+        echo "→ nvm install lts/${lts_alias} --latest-npm"
+        nvm install "lts/${lts_alias}" --latest-npm
+    fi
     nvm use "lts/${lts_alias}" >/dev/null 2>&1
     local new_node_version
     new_node_version="$(node -v | tr -d 'v')"
