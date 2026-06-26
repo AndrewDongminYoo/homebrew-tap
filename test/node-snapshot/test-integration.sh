@@ -48,6 +48,38 @@ corepack_in_lock="$(jq -r '.packages | has("corepack")' "${lock}")"
 [[ "${corepack_in_lock}" == "false" ]] || _fail "corepack must not appear in lock packages"
 _pass "snapshot: corepack filtered from packages"
 
+# ── snapshot guard ────────────────────────────────────────────────────────────
+# Branch on whether iron has any real globals so the test is deterministic in any
+# environment: with ≥1 real package an injected phantom is a partial drop (warn);
+# with an empty live env a non-empty lock is a full wipe (refuse).
+real_count="$(jq '.packages | length' "${lock}")"
+if [[ "${real_count}" -gt 0 ]]; then
+    jq '.packages += {"node-snapshot-phantom-pkg": "9.9.9"}' "${lock}" > "${lock}.tmp" \
+        && mv "${lock}.tmp" "${lock}"
+    guard_out="$("${BIN}" snapshot iron 2>&1 || true)"
+    _assert_match "${guard_out}" "drops packages"
+    _assert_match "${guard_out}" "node-snapshot-phantom-pkg"
+    _pass "snapshot guard: warns on dropped package"
+
+    [[ "$(jq -r '.packages | has("node-snapshot-phantom-pkg")' "${lock}")" == "false" ]] \
+        || _fail "phantom package should be dropped from lock"
+    _pass "snapshot guard: records live state after dropping phantom"
+else
+    printf '{"lts_alias":"iron","node_version":"x","snapshot_utc":"x","packages":{"node-snapshot-phantom-pkg":"9.9.9"}}\n' \
+        > "${lock}"
+    guard_out="$("${BIN}" snapshot iron 2>&1 || true)"
+    _assert_match "${guard_out}" "refusing to overwrite"
+    _pass "snapshot guard: refuses full wipe"
+
+    [[ "$(jq -r '.packages | has("node-snapshot-phantom-pkg")' "${lock}")" == "true" ]] \
+        || _fail "lock should be untouched after a refused wipe"
+    _pass "snapshot guard: lock intact after refused wipe"
+
+    force_out="$("${BIN}" snapshot --force iron 2>&1 || true)"
+    _assert_match "${force_out}" "Snapshot complete"
+    _pass "snapshot guard: --force overrides the refusal"
+fi
+
 # ── upgrade --check ───────────────────────────────────────────────────────────
 # Seed config with a very old last_check_utc to force the check
 mkdir -p "${TMPDIR_STATE}"
