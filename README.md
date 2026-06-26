@@ -88,6 +88,7 @@ echo '{"tracked":["iron","jod","krypton"],"check_interval_days":7,"last_check_ut
 ```bash
 node-snapshot snapshot              # save global packages for all tracked LTS versions
 node-snapshot snapshot iron         # save global packages for a single LTS alias
+node-snapshot snapshot --force iron # record an empty global set over a non-empty lock (override the wipe guard)
 node-snapshot upgrade               # update all tracked LTS versions and migrate packages
 node-snapshot upgrade iron          # update a single LTS alias
 node-snapshot upgrade --check       # check for updates without installing
@@ -125,6 +126,27 @@ node-snapshot consolidate jod
 ```
 
 After installation the lock file is updated via `snapshot`.
+
+### Protecting the lock from accidental wipes
+
+`snapshot` records the live global set, and `nvm use lts/<alias>` always resolves to the **newest installed** Node version of that line.
+So right after a new Node minor is installed — before its globals are migrated — the live set is empty.
+Running `snapshot` in that window would otherwise overwrite a populated lock with `{}` and bake the loss into the next commit.
+
+Two safeguards prevent this:
+
+- **`upgrade` carries packages forward.** On a version bump it passes `nvm install --reinstall-packages-from=<old version>`, so the new version inherits the old globals instead of starting bare.
+- **`snapshot` refuses a full wipe.** If the live global set is empty but the lock still tracks packages, `snapshot` aborts rather than recording the empty state. Partial drops (some packages removed) are recorded but printed as a warning so the change is visible before you commit.
+
+```bash
+node-snapshot snapshot jod
+# ✗ lts/jod: refusing to overwrite 5 tracked package(s) with an empty snapshot.
+#   Restore them:        node-snapshot migrate jod jod
+#   Record empty anyway: node-snapshot snapshot --force jod
+```
+
+To restore the packages, run `node-snapshot migrate <alias> <alias>` (reinstalls from the lock) or recover the previous lock from git.
+To deliberately record an empty global set, pass `--force`.
 
 ### Shell Integration
 

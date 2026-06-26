@@ -193,11 +193,14 @@ Writes shell function definitions to stdout. No side effects.
 
 For each tracked alias (or the specified one):
 
-1. `nvm use lts/<alias>`
+1. `nvm use lts/<alias>` (resolves to the newest installed version of that LTS line)
 2. `npm list -g --depth=0 --json` → extract top-level packages
-3. Filter out `npm` itself (bundled with Node, not a user-installed package)
-4. Write `lts-<alias>.lock.json`
-5. Update `last_snapshot_utc`
+3. Filter out `npm` and `corepack` (bundled with Node, not user-installed)
+4. Guard against accidental loss before writing the lock:
+   - **Full wipe** (live set empty, existing lock non-empty): refuse and exit non-zero unless `--force`. Protects against snapshotting a freshly installed, not-yet-migrated Node version over a populated lock.
+   - **Partial drop** (some packages removed): record it, but print a warning listing the dropped packages.
+5. Write `lts-<alias>.lock.json`
+6. Update `last_snapshot_utc`
 
 ### `node-snapshot upgrade [alias] [--check]`
 
@@ -215,7 +218,7 @@ For each tracked alias (or the specified one):
 
 Without `--check` (interactive):
 
-1. `nvm install lts/<alias> --latest-npm`
+1. Resolve the remote target via `nvm version-remote lts/<alias>`. On a version bump, run `nvm install lts/<alias> --latest-npm --reinstall-packages-from=<old version>` so the new version inherits the old globals. The flag is omitted when there is no bump, since nvm refuses to reinstall from the version it is installing.
 2. If new version differs from lock file's `node_version`: run `migrate <old> <alias>`
 3. Run `snapshot <alias>`
 
