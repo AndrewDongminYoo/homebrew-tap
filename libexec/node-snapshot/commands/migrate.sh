@@ -31,10 +31,15 @@ if [[ ! -f "${lock_file}" ]]; then
     exit 1
 fi
 
-echo "→ nvm use lts/${to}"
 nvm use "lts/${to}" >/dev/null 2>&1
+to_version="$(node -v | tr -d 'v')"
+echo "→ nvm use lts/${to} (v${to_version})"
 
-echo "→ Installing packages from lts/${from} lock into lts/${to}"
+if [[ "${from}" == "${to}" ]]; then
+    echo "→ Installing packages from lts/${to} lock into v${to_version}"
+else
+    echo "→ Installing packages from lts/${from} lock into lts/${to} (v${to_version})"
+fi
 while IFS="=" read -r pkg version; do
     [[ -z "${pkg}" ]] && continue
     echo "  npm install -g ${pkg}@${version}"
