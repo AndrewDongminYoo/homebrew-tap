@@ -54,7 +54,7 @@ jobs:
             --title "$TAG" \
             --generate-notes
 
-      - name: Update formula url and sha256
+      - name: Update formula and bin versions
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG#v}"
@@ -69,8 +69,12 @@ jobs:
               "$formula"
           done
 
+          # Keep the bin --version constants in lockstep with the formulas
+          sed -i -e "s|^BREW_SNAPSHOT_VERSION=\".*\"|BREW_SNAPSHOT_VERSION=\"${VERSION}\"|" bin/brew-snapshot
+          sed -i -e "s|^NODE_SNAPSHOT_VERSION=\".*\"|NODE_SNAPSHOT_VERSION=\"${VERSION}\"|" bin/node-snapshot
+
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/brew-snapshot.rb Formula/node-snapshot.rb
-          git commit -m "chore: bump formulas to ${TAG}"
+          git add Formula/brew-snapshot.rb Formula/node-snapshot.rb bin/brew-snapshot bin/node-snapshot
+          git commit -m "chore: bump version to ${TAG}"
           git push origin main
