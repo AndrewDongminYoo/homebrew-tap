@@ -67,9 +67,10 @@ Each formula rewrites the `LIBEXEC_DIR` literal in its entry-point binary at ins
 
 ## Release Process
 
-Pushing a semver tag (e.g. `v0.4.0`) triggers `.github/workflows/homebrew-releaser.yml`, which:
+Pushing a semver tag (e.g. `v0.5.0`) triggers `.github/workflows/homebrew-releaser.yml`, which:
 
-1. Creates the GitHub release with auto-generated notes
-2. **Automatically** updates `url`, `sha256`, and `version` in `Formula/brew-snapshot.rb`
+1. Skips the release unless the pushed tag is strictly higher than the latest GitHub release (`check-semver` job)
+2. Creates the GitHub release with auto-generated notes
+3. **Automatically** updates `url`, `sha256`, and `version` in **both** `Formula/brew-snapshot.rb` and `Formula/node-snapshot.rb`, then commits and pushes the bump to `main`
 
-`Formula/node-snapshot.rb` is **not** updated by the workflow — update `url`, `sha256`, and `version` there manually before tagging, or push a follow-up commit.
+Both formulas share one tarball URL and `sha256` (the repo archive), so the workflow keeps them in lockstep — no manual formula edits are needed before tagging.
