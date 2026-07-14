@@ -1,2 +1,7 @@
 # Prettier friendly markdownlint config (all formatting rules disabled)
 extends: markdownlint/style/prettier
+
+# Allow repeated subsection headings (e.g. "Usage", "State Files") under
+# different tool sections; only flag duplicates that share the same parent.
+MD024:
+  siblings_only: true
