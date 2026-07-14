@@ -1,24 +1,48 @@
 # homebrew-tap
 
-A Homebrew tap with two CLI tools for snapshotting your Mac development environment.
+[![GitHub release](https://img.shields.io/github/v/release/AndrewDongminYoo/homebrew-tap?sort=semver)](https://github.com/AndrewDongminYoo/homebrew-tap/releases)
+[![License: MIT](https://img.shields.io/github/license/AndrewDongminYoo/homebrew-tap)](LICENSE)
+![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 
-## Tools
+A Homebrew tap with two CLI tools for snapshotting your Mac development environment.
 
 | Tool            | Purpose                                              |
 | --------------- | ---------------------------------------------------- |
 | `brew-snapshot` | Snapshot and restore your Homebrew environment       |
 | `node-snapshot` | Manage nvm LTS versions and global npm package locks |
 
+## Requirements
+
+- macOS with [Homebrew](https://brew.sh).
+- `brew-snapshot`: no extra dependencies.
+- `node-snapshot`: [nvm](https://github.com/nvm-sh/nvm) installed (loaded from `$NVM_DIR/nvm.sh`); `jq` is pulled in automatically as a formula dependency.
+
+## Install
+
+Install either tool directly — Homebrew adds the tap for you:
+
+```bash
+brew install AndrewDongminYoo/tap/brew-snapshot
+brew install AndrewDongminYoo/tap/node-snapshot
+```
+
+Or add the tap once, then install by short name:
+
+```bash
+brew tap AndrewDongminYoo/tap
+brew install brew-snapshot node-snapshot
+```
+
+Each tool needs a one-time setup step — see its section below.
+
 ---
 
 ## brew-snapshot
 
-### Install
+### Setup
 
 ```bash
-brew tap AndrewDongminYoo/tap
-brew install brew-snapshot
-brew-snapshot setup
+brew-snapshot setup   # register launchd agent for login automation
 ```
 
 ### Usage
@@ -62,12 +86,7 @@ For version-critical packages (e.g. `postgresql@17`), check `Brewfile.lock` for 
 
 ## node-snapshot
 
-### Install
-
-```bash
-brew tap AndrewDongminYoo/tap
-brew install node-snapshot
-```
+### Setup
 
 Add shell integration to your `.zshrc`:
 
@@ -160,3 +179,33 @@ To deliberately record an empty global set, pass `--force`.
 
 - Support shells other than zsh (hook registration uses `add-zsh-hook`)
 - Manage npm packages globally without nvm
+
+---
+
+## Updating
+
+```bash
+brew update && brew upgrade brew-snapshot node-snapshot
+```
+
+## Uninstalling
+
+```bash
+brew uninstall brew-snapshot node-snapshot
+brew untap AndrewDongminYoo/tap
+```
+
+## Contributing
+
+Issues and pull requests are welcome.
+Scripts must pass `shellcheck` and the unit tests under `test/` before merging:
+
+```bash
+shellcheck bin/* libexec/*/commands/*.sh
+bash test/brew-snapshot/test-unit.sh
+bash test/node-snapshot/test-unit.sh
+```
+
+## License
+
+[MIT](LICENSE) © Dongmin, Yu
