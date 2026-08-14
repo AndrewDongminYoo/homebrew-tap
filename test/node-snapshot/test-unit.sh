@@ -46,10 +46,29 @@ _assert_match "${output}" "iron"
 _pass "status: config present → shows alias"
 
 # ── init ─────────────────────────────────────────────────────────────────────
-output="$("${BIN}" init)"
+init_output="${TMPDIR_STATE}/init.zsh"
+"${BIN}" init > "${init_output}" &
+init_pid=$!
+init_attempt=0
+while kill -0 "${init_pid}" 2>/dev/null && [[ "${init_attempt}" -lt 20 ]]; do
+    sleep 0.1
+    init_attempt=$((init_attempt + 1))
+done
+
+if kill -0 "${init_pid}" 2>/dev/null; then
+    kill "${init_pid}" 2>/dev/null || true
+    wait "${init_pid}" 2>/dev/null || true
+    _fail "init: does not exit promptly"
+fi
+
+if ! wait "${init_pid}"; then
+    _fail "init: exits non-zero"
+fi
+
+output="$(< "${init_output}")"
 _assert_match "${output}" "_node_snapshot_chpwd"
 _assert_match "${output}" "add-zsh-hook"
 _assert_match "${output}" "node-snapshot upgrade --check"
-_pass "init: emits chpwd function and hook registration"
+_pass "init: emits chpwd function and hook registration promptly"
 
 echo ""; echo "All unit tests: PASS"
