@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NODE_SNAPSHOT_VERSION="0.5.1"
+NODE_SNAPSHOT_VERSION="0.5.2"
 export NODE_SNAPSHOT_DIR="${NODE_SNAPSHOT_DIR:-${HOME}/.local/share/node-snapshot}"
 
 _self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

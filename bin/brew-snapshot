@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BREW_SNAPSHOT_VERSION="0.5.1"
+BREW_SNAPSHOT_VERSION="0.5.2"
 export BREW_SNAPSHOT_DIR="${BREW_SNAPSHOT_DIR:-${HOME}/.local/share/brew-snapshot}"
 
 # libexec location: Homebrew install → $(brew --prefix)/libexec/brew-snapshot/commands
