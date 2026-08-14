@@ -6,6 +6,7 @@ BIN="${SCRIPT_DIR}/../../bin/brew-snapshot"
 TMPDIR_STATE="$(mktemp -d)"
 trap 'rm -rf "${TMPDIR_STATE}"' EXIT
 export BREW_SNAPSHOT_DIR="${TMPDIR_STATE}"
+export HOMEBREW_NO_AUTO_UPDATE=1
 
 _pass() { printf '\033[32m✓\033[0m %s\n' "$1"; }
 _fail() { printf '\033[31m✗\033[0m %s\n' "$1"; exit 1; }
