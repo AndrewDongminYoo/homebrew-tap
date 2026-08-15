@@ -1,9 +1,9 @@
 class Imgen < Formula
   desc "Terminal browser and generator for the images the Codex CLI makes"
   homepage "https://github.com/AndrewDongminYoo/imgen"
-  url "https://github.com/AndrewDongminYoo/imgen/releases/download/v0.1.0/imgen-darwin-arm64.tar.gz"
-  sha256 "0642950dad0c19daa442a1f4bdb9feb82cb10d2589840804569670f48ffec6d0"
-  version "0.1.0"
+  url "https://github.com/AndrewDongminYoo/imgen/releases/download/v0.1.1/imgen-darwin-arm64.tar.gz"
+  sha256 "cf1a673e15e7541bb5202823730a5304e268ff957fadf0aa2cb4e635de74b2f0"
+  version "0.1.1"
   license "MIT"
 
   # OpenTUI links a per-platform native library, so this binary is Apple Silicon only.
