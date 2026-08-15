@@ -1,9 +1,9 @@
 class Maintainer < Formula
   desc "Terminal dashboard over every repository you can push to"
   homepage "https://github.com/AndrewDongminYoo/maintainer_tui"
-  url "https://github.com/AndrewDongminYoo/maintainer_tui/releases/download/v0.1.0/maintainer-darwin-arm64.tar.gz"
-  sha256 "92b682f27300ca8835ef2b6fe6a3f737de76fdd96d445f1b1076f901965dcddf"
-  version "0.1.0"
+  url "https://github.com/AndrewDongminYoo/maintainer_tui/releases/download/v0.1.1/maintainer-darwin-arm64.tar.gz"
+  sha256 "7506720055c9b07d04cfe4f9dbabb614607ccc8ea947f08868298291763dcf49"
+  version "0.1.1"
   license "MIT"
 
   # The release ships a single compiled binary built on Apple Silicon. Other platforms would
