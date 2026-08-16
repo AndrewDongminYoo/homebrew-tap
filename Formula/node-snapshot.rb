@@ -3,8 +3,8 @@ class NodeSnapshot < Formula
   homepage "https://github.com/AndrewDongminYoo/homebrew-tap"
   # Fill url + sha256 after creating a GitHub release tag
   url "https://github.com/AndrewDongminYoo/homebrew-tap/archive/refs/tags/v0.5.2.tar.gz"
-  sha256 "65e405db490bf081cf4704c65b59c76eb2fd4d816c655ec7d419cb30af4bc64b"
   version "0.5.2"
+  sha256 "65e405db490bf081cf4704c65b59c76eb2fd4d816c655ec7d419cb30af4bc64b"
   license "MIT"
 
   head "https://github.com/AndrewDongminYoo/homebrew-tap.git", branch: "main"
@@ -53,7 +53,7 @@ class NodeSnapshot < Formula
     snap = testpath/"state"
     snap.mkpath
     (snap/"config.json").write(
-      '{"tracked":["iron"],"check_interval_days":7,"last_check_utc":""}'
+      '{"tracked":["iron"],"check_interval_days":7,"last_check_utc":""}',
     )
     status_out = shell_output("#{bin}/node-snapshot status")
     assert_match "State directory:", status_out
