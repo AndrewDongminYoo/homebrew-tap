@@ -1,9 +1,9 @@
 class Imgen < Formula
   desc "Terminal browser and generator for the images the Codex CLI makes"
   homepage "https://github.com/AndrewDongminYoo/imgen"
-  url "https://github.com/AndrewDongminYoo/imgen/releases/download/v0.2.3/imgen-darwin-arm64.tar.gz"
-  sha256 "7eefb55471be818d7a7341ac037122d1311d262c3abe26787d5723c9505bfbee"
-  version "0.2.3"
+  url "https://github.com/AndrewDongminYoo/imgen/releases/download/v0.6.0/imgen-darwin-arm64.tar.gz"
+  version "0.6.0"
+  sha256 "b272d709de3bfaa1350391a487c49e135de369daef9bb2c2c9190e5601f824c3"
   license "MIT"
 
   # OpenTUI links a per-platform native library, so this binary is Apple Silicon only.
@@ -28,9 +28,8 @@ class Imgen < Formula
   end
 
   test do
-    # A TUI needs a terminal, so the check is that the binary loads and finds its library path
-    # rather than that it renders.
-    assert_predicate bin/"imgen", :executable?
-    assert_match "imgen", shell_output("file #{bin}/imgen")
+    # --version answers before the renderer claims the terminal, so this runs the binary for real:
+    # it loads the native library and reports its own version, neither of which `file` could show.
+    assert_match version.to_s, shell_output("#{bin}/imgen --version")
   end
 end
