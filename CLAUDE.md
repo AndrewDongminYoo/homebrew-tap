@@ -4,10 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Purpose
 
-A Homebrew tap providing two CLI tools distributed as shell scripts:
+A Homebrew tap.
+`README.md` lists every formula the tap serves; this file covers only the ones whose source lives here.
+
+Two formulae package shell scripts built in this repository:
 
 - **`brew-snapshot`** — snapshot and restore Homebrew environments
 - **`node-snapshot`** — manage nvm LTS versions and global npm packages
+
+`Formula/imgen.rb` and `Formula/maintainer.rb` are packaging-only.
+Each points at a prebuilt Apple Silicon binary released from its own upstream repository, so nothing under `bin/`, `libexec/`, or `test/` belongs to them.
 
 ## Common Commands
 
@@ -73,4 +79,7 @@ Pushing a semver tag (e.g. `v0.5.0`) triggers `.github/workflows/homebrew-releas
 2. Creates the GitHub release with auto-generated notes
 3. **Automatically** updates `url`, `sha256`, and `version` in **both** `Formula/brew-snapshot.rb` and `Formula/node-snapshot.rb`, and bumps the `BREW_SNAPSHOT_VERSION` / `NODE_SNAPSHOT_VERSION` constants in `bin/brew-snapshot` / `bin/node-snapshot` to match, then commits and pushes the bump to `main`
 
-Both formulas share one tarball URL and `sha256` (the repo archive), so the workflow keeps the formulas and the `bin/` `--version` output in lockstep — no manual version edits are needed before tagging.
+Both formulas share one tarball URL and `sha256` (the repo archive), so the workflow keeps the formulas and the `bin/` `--version` output in lockstep: no manual version edits are needed before tagging.
+
+`Formula/imgen.rb` and `Formula/maintainer.rb` are outside this workflow.
+Their versions track releases in their own upstream repositories, so each bump is a hand-written commit editing `url`, `version`, and `sha256` in that one file.
