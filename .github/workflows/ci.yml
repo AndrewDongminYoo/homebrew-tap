@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install ShellCheck
+        run: brew install shellcheck
+
+      - name: Run ShellCheck
+        run: shellcheck bin/* libexec/*/commands/*.sh
+
+      - name: Run unit tests
+        run: |
+          for test_script in test/*/test-unit.sh; do
+            bash "$test_script"
+          done
