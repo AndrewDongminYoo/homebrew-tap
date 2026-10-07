@@ -14,7 +14,7 @@ shift 2>/dev/null || true
 
 # Handle informational options before any command can change system state.
 case "${cmd}" in
-  snapshot|restore|status|setup)
+  snapshot|upgrade|restore|status|setup)
     for arg in "$@"; do
       case "${arg}" in
         --help|-h) cmd=help; break ;;
@@ -26,7 +26,7 @@ case "${cmd}" in
       help|--version) ;;
       *)
         for arg in "$@"; do
-          if [[ "${cmd}" == "snapshot" && "${arg}" == "--greedy" ]]; then
+          if [[ "${cmd}" == "upgrade" && "${arg}" == "--greedy" ]]; then
             continue
           fi
           echo "brew-snapshot: unknown option '${arg}' for '${cmd}'" >&2
@@ -41,6 +41,7 @@ esac
 
 case "${cmd}" in
   snapshot) exec "${LIBEXEC_DIR}/snapshot.sh" "$@" ;;
+  upgrade)  exec "${LIBEXEC_DIR}/upgrade.sh"  "$@" ;;
   restore)  exec "${LIBEXEC_DIR}/restore.sh"  "$@" ;;
   status)   exec "${LIBEXEC_DIR}/status.sh"   "$@" ;;
   setup)    exec "${LIBEXEC_DIR}/setup.sh"    "$@" ;;
@@ -51,7 +52,8 @@ case "${cmd}" in
     echo "Usage: brew-snapshot <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  snapshot [--greedy]  Update Homebrew and save current state"
+    echo "  snapshot             Save current Homebrew state"
+    echo "  upgrade [--greedy]   Update and upgrade Homebrew, then save state"
     echo "  restore              Reinstall packages from Brewfile"
     echo "  status               Show last snapshot time and package counts"
     echo "  setup                Register launchd agent for automatic snapshots"

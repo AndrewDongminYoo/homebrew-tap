@@ -4,22 +4,6 @@ set -euo pipefail
 STATE_DIR="${BREW_SNAPSHOT_DIR:-${HOME}/.local/share/brew-snapshot}"
 mkdir -p "${STATE_DIR}"
 
-GREEDY=false
-for arg in "$@"; do
-  [[ "${arg}" == "--greedy" ]] && GREEDY=true
-done
-
-echo "→ brew update"
-brew update
-
-if ${GREEDY}; then
-  echo "→ brew upgrade --greedy"
-  brew upgrade --greedy
-else
-  echo "→ brew upgrade"
-  brew upgrade
-fi
-
 echo "→ Brewfile"
 brew bundle dump --file="${STATE_DIR}/Brewfile" --force
 
