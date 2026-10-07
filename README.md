@@ -133,6 +133,9 @@ brew-snapshot status             # show last snapshot info
 brew-snapshot setup              # register launchd agent for login automation
 ```
 
+All commands accept `--help` / `-h` and `--version` / `-V` without running the command or changing state.
+Unknown command options are rejected before execution.
+
 ### State Files
 
 Stored in `~/.local/share/brew-snapshot/` (override: `$BREW_SNAPSHOT_DIR`):
@@ -194,6 +197,9 @@ node-snapshot consolidate           # merge packages from all v20/v22/v24 patch 
 node-snapshot consolidate jod       # consolidate a single LTS alias
 node-snapshot status                # show tracked versions and lock file state
 ```
+
+All commands accept `--help` / `-h` and `--version` / `-V` without running the command or changing state.
+Unknown command options are rejected before execution.
 
 ### State Files
 
