@@ -19,6 +19,9 @@ class NodeSnapshot < Formula
     inreplace bin/"node-snapshot",
       %r{\$\{_self\}/\.\./libexec/node-snapshot/commands},
       "#{opt_libexec}/node-snapshot/commands"
+    inreplace bin/"node-snapshot",
+      /^NODE_SNAPSHOT_VERSION="[^"]+"$/,
+      "NODE_SNAPSHOT_VERSION=\"#{version}\""
   end
 
   def caveats
@@ -40,7 +43,7 @@ class NodeSnapshot < Formula
     # Dispatcher
     assert_match "Usage: node-snapshot", shell_output("#{bin}/node-snapshot help")
     assert_match "Usage: node-snapshot", shell_output("#{bin}/node-snapshot --help")
-    assert_match "node-snapshot",        shell_output("#{bin}/node-snapshot --version")
+    assert_match "node-snapshot #{version}", shell_output("#{bin}/node-snapshot --version")
     assert_match "unknown command",      shell_output("#{bin}/node-snapshot bogus 2>&1", 1)
 
     # Use an isolated state directory so tests never touch the real home
