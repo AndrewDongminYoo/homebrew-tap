@@ -6,12 +6,13 @@
 
 A Homebrew tap with CLI tools for running and snapshotting a Mac development environment.
 
-| Tool            | Purpose                                                   |
-| --------------- | --------------------------------------------------------- |
-| `maintainer`    | Terminal dashboard over every repository you can push to  |
-| `imgen`         | Terminal browser and generator for Codex-generated images |
-| `brew-snapshot` | Snapshot and restore your Homebrew environment            |
-| `node-snapshot` | Manage nvm LTS versions and global npm package locks      |
+| Tool            | Purpose                                                     |
+| --------------- | ----------------------------------------------------------- |
+| `maintainer`    | Terminal dashboard over every repository you can push to    |
+| `imgen`         | Terminal browser and generator for Codex-generated images   |
+| `brew-snapshot` | Snapshot and restore your Homebrew environment              |
+| `node-snapshot` | Manage nvm LTS versions and global npm package locks        |
+| `histfix`       | Find and replace zsh history with literal or regex matching |
 
 ## Requirements
 
@@ -20,6 +21,7 @@ A Homebrew tap with CLI tools for running and snapshotting a Mac development env
 - `imgen`: the [Codex CLI](https://github.com/openai/codex), which Homebrew does not package — install it with `npm install -g @openai/codex`. Apple Silicon only.
 - `brew-snapshot`: no extra dependencies.
 - `node-snapshot`: [nvm](https://github.com/nvm-sh/nvm) installed (loaded from `$NVM_DIR/nvm.sh`); `jq` is pulled in automatically as a formula dependency.
+- `histfix`: zsh 5.9 and Python 3.9 or newer; the HEAD formula installs Python 3.14.
 
 `maintainer` and `imgen` ship a prebuilt binary rather than a script, and that binary is built on Apple Silicon; the formulae declare `arch: :arm64` so Homebrew refuses rather than installing something that cannot run.
 
@@ -266,6 +268,27 @@ To deliberately record an empty global set, pass `--force`.
 
 - Support shells other than zsh (hook registration uses `add-zsh-hook`)
 - Manage npm packages globally without nvm
+
+---
+
+## histfix
+
+A zsh plugin for literal and regex replacements in history, with a preview, confirmation, and one-step undo.
+It preserves individual entries and excludes its own command invocations from replacement.
+
+Install the development version and load the plugin:
+
+```zsh
+brew install --HEAD AndrewDongminYoo/tap/histfix
+source "$(brew --prefix)/share/histfix/histfix.plugin.zsh"
+histfix replace 'gpt-6.1-astra' 'gpt-6-astra'
+histfix replace --regex 'gpt-6(?:\.\d+)?-(sol)' 'gpt-6.1-$1'
+histfix undo
+```
+
+The formula is HEAD-only until a stable release is prepared.
+Close other shells sharing the history file before applying changes.
+See [source, setup, regex syntax, and shared-history limitations](https://github.com/AndrewDongminYoo/histfix).
 
 ---
 
