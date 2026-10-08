@@ -2,9 +2,9 @@ class NodeSnapshot < Formula
   desc "Manage nvm LTS versions and global npm packages with snapshots"
   homepage "https://github.com/AndrewDongminYoo/homebrew-tap"
   # Fill url + sha256 after creating a GitHub release tag
-  url "https://github.com/AndrewDongminYoo/homebrew-tap/archive/refs/tags/v0.5.2.tar.gz"
-  version "0.5.2"
-  sha256 "65e405db490bf081cf4704c65b59c76eb2fd4d816c655ec7d419cb30af4bc64b"
+  url "https://github.com/AndrewDongminYoo/homebrew-tap/archive/refs/tags/v0.6.0.tar.gz"
+  version "0.6.0"
+  sha256 "5af8db8a00de659b5127d20da6634aa0b41a69ae8f8ae336433fd84d3e7fc4b3"
   license "MIT"
 
   head "https://github.com/AndrewDongminYoo/homebrew-tap.git", branch: "main"
