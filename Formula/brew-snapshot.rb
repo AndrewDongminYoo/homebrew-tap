@@ -18,6 +18,9 @@ class BrewSnapshot < Formula
     inreplace bin/"brew-snapshot",
       %r{\$\{_self\}/\.\./libexec/brew-snapshot/commands},
       "#{opt_libexec}/brew-snapshot/commands"
+    inreplace bin/"brew-snapshot",
+      /^BREW_SNAPSHOT_VERSION="[^"]+"$/,
+      "BREW_SNAPSHOT_VERSION=\"#{version}\""
   end
 
   def caveats
@@ -34,7 +37,7 @@ class BrewSnapshot < Formula
     # help / --help / --version / unknown command
     assert_match "Usage: brew-snapshot", shell_output("#{bin}/brew-snapshot help")
     assert_match "Usage: brew-snapshot", shell_output("#{bin}/brew-snapshot --help")
-    assert_match "brew-snapshot",        shell_output("#{bin}/brew-snapshot --version")
+    assert_match "brew-snapshot #{version}", shell_output("#{bin}/brew-snapshot --version")
     assert_match "unknown command",      shell_output("#{bin}/brew-snapshot bogus 2>&1", 1)
 
     # Use an isolated state directory so tests never touch the real home

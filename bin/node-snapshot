@@ -10,6 +10,40 @@ LIBEXEC_DIR="${_self}/../libexec/node-snapshot/commands"
 cmd="${1:-help}"
 shift 2>/dev/null || true
 
+# Handle informational options before any command can change system state.
+case "${cmd}" in
+  init|snapshot|upgrade|migrate|consolidate|status)
+    for arg in "$@"; do
+      case "${arg}" in
+        --help|-h) cmd=help; break ;;
+        --version|-V) cmd=--version; break ;;
+        *) ;;
+      esac
+    done
+    case "${cmd}" in
+      help|--version) ;;
+      *)
+        for arg in "$@"; do
+          case "${cmd}:${arg}" in
+            snapshot:--force|upgrade:--check) continue ;;
+            *) ;;
+          esac
+          if [[ "${arg}" != -* ]]; then
+            case "${cmd}" in
+              snapshot|upgrade|migrate|consolidate) continue ;;
+              *) ;;
+            esac
+          fi
+          echo "node-snapshot: unknown option '${arg}' for '${cmd}'" >&2
+          echo "Run 'node-snapshot ${cmd} --help' for usage." >&2
+          exit 1
+        done
+        ;;
+    esac
+    ;;
+  *) ;;
+esac
+
 case "${cmd}" in
   init)        exec "${LIBEXEC_DIR}/init.sh"        "$@" ;;
   snapshot)    exec "${LIBEXEC_DIR}/snapshot.sh"    "$@" ;;
@@ -33,6 +67,10 @@ case "${cmd}" in
     echo "  migrate <from> <to>    Copy packages from one LTS alias to another"
     echo "  consolidate [alias]    Merge packages across all patch versions into the latest"
     echo "  status                 Show tracked versions and lock file state"
+    echo ""
+    echo "Options (available with every command):"
+    echo "  --help, -h             Show help without running the command"
+    echo "  --version, -V          Show version without running the command"
     echo ""
     echo "State directory: ${NODE_SNAPSHOT_DIR}"
     ;;

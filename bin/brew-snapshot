@@ -12,8 +12,36 @@ LIBEXEC_DIR="${_self}/../libexec/brew-snapshot/commands"
 cmd="${1:-help}"
 shift 2>/dev/null || true
 
+# Handle informational options before any command can change system state.
+case "${cmd}" in
+  snapshot|upgrade|restore|status|setup)
+    for arg in "$@"; do
+      case "${arg}" in
+        --help|-h) cmd=help; break ;;
+        --version|-V) cmd=--version; break ;;
+        *) ;;
+      esac
+    done
+    case "${cmd}" in
+      help|--version) ;;
+      *)
+        for arg in "$@"; do
+          if [[ "${cmd}" == "upgrade" && "${arg}" == "--greedy" ]]; then
+            continue
+          fi
+          echo "brew-snapshot: unknown option '${arg}' for '${cmd}'" >&2
+          echo "Run 'brew-snapshot ${cmd} --help' for usage." >&2
+          exit 1
+        done
+        ;;
+    esac
+    ;;
+  *) ;;
+esac
+
 case "${cmd}" in
   snapshot) exec "${LIBEXEC_DIR}/snapshot.sh" "$@" ;;
+  upgrade)  exec "${LIBEXEC_DIR}/upgrade.sh"  "$@" ;;
   restore)  exec "${LIBEXEC_DIR}/restore.sh"  "$@" ;;
   status)   exec "${LIBEXEC_DIR}/status.sh"   "$@" ;;
   setup)    exec "${LIBEXEC_DIR}/setup.sh"    "$@" ;;
@@ -24,11 +52,16 @@ case "${cmd}" in
     echo "Usage: brew-snapshot <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  snapshot [--greedy]  Update Homebrew and save current state"
+    echo "  snapshot             Save current Homebrew state"
+    echo "  upgrade [--greedy]   Update and upgrade Homebrew, then save state"
     echo "  restore              Reinstall packages from Brewfile"
     echo "  status               Show last snapshot time and package counts"
     echo "  setup                Register launchd agent for automatic snapshots"
     echo "  help                 Show this help"
+    echo ""
+    echo "Options (available with every command):"
+    echo "  --help, -h           Show help without running the command"
+    echo "  --version, -V        Show version without running the command"
     echo ""
     echo "State directory: ${BREW_SNAPSHOT_DIR:-~/.local/share/brew-snapshot}"
     ;;

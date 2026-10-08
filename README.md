@@ -126,12 +126,18 @@ brew-snapshot setup   # register launchd agent for login automation
 ### Usage
 
 ```bash
-brew-snapshot snapshot           # save current Homebrew state
-brew-snapshot snapshot --greedy  # also upgrade casks
+brew-snapshot snapshot           # save current Homebrew state without updating packages
+brew-snapshot upgrade           # update and upgrade Homebrew, then save state
+brew-snapshot upgrade --greedy   # include greedy cask upgrades, then save state
 brew-snapshot restore            # reinstall from Brewfile on a new Mac
 brew-snapshot status             # show last snapshot info
 brew-snapshot setup              # register launchd agent for login automation
 ```
+
+All commands accept `--help` / `-h` and `--version` / `-V` without running the command or changing state.
+Unknown command options are rejected before execution.
+Snapshots, including automatic login snapshots, only record the currently installed state.
+The previous `snapshot --greedy` workflow is now `upgrade --greedy`.
 
 ### State Files
 
@@ -194,6 +200,9 @@ node-snapshot consolidate           # merge packages from all v20/v22/v24 patch 
 node-snapshot consolidate jod       # consolidate a single LTS alias
 node-snapshot status                # show tracked versions and lock file state
 ```
+
+All commands accept `--help` / `-h` and `--version` / `-V` without running the command or changing state.
+Unknown command options are rejected before execution.
 
 ### State Files
 
