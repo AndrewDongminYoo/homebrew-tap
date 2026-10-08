@@ -28,7 +28,8 @@ class Histfix < Formula
 
   test do
     history_file = testpath/"history"
-    original = ": 100:1;codex --model gpt-6-sol\n"
+    invocation = ": 101:0;histfix test invocation\n"
+    original = ": 100:1;codex --model gpt-6-sol\n#{invocation}"
     history_file.write original
     script = <<~EOS
       HISTFILE='#{history_file}'
@@ -42,11 +43,12 @@ class Histfix < Formula
       HISTFILE=''
     EOS
     system "/bin/zsh", "-f", "-i", "-c", script
-    assert_equal ": 100:1;codex --model gpt-6.1-sol\n", history_file.read
+    assert_equal ": 100:1;codex --model gpt-6.1-sol\n#{invocation}", history_file.read
     system "/bin/zsh", "-f", "-i", "-c", <<~EOS
       HISTFILE='#{history_file}'
       HISTSIZE=100
       SAVEHIST=100
+      fc -R "$HISTFILE"
       source '#{share}/histfix/histfix.plugin.zsh'
       histfix undo <<< y || exit 1
       HISTFILE=''
