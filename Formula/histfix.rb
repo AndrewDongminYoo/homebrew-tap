@@ -1,8 +1,8 @@
 class Histfix < Formula
   desc "Find and replace zsh history with previews and regex capture groups"
-  homepage "https://github.com/AndrewDongminYoo/histfix"
+  homepage "https://github.com/AndrewDongminYoo/zsh-histfix"
   license "MIT"
-  head "https://github.com/AndrewDongminYoo/histfix.git", branch: "main"
+  head "https://github.com/AndrewDongminYoo/zsh-histfix.git", branch: "main"
 
   depends_on "python@3.14"
 

@@ -288,7 +288,7 @@ histfix undo
 
 The formula is HEAD-only until a stable release is prepared.
 Close other shells sharing the history file before applying changes.
-See [source, setup, regex syntax, and shared-history limitations](https://github.com/AndrewDongminYoo/histfix).
+See [source, setup, regex syntax, and shared-history limitations](https://github.com/AndrewDongminYoo/zsh-histfix).
 
 ---
 
