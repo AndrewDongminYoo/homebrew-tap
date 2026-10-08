@@ -21,6 +21,7 @@ class Histfix < Formula
       Preview and confirm a replacement:
         histfix replace 'gpt-6.1-astra' 'gpt-6-astra'
 
+      For replacement and undo, start a fresh zsh session configured without SHARE_HISTORY.
       Close other shells sharing HISTFILE before applying changes.
       Undo the last replacement with: histfix undo
     EOS
