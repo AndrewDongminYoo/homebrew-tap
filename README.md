@@ -34,6 +34,7 @@ brew install AndrewDongminYoo/tap/maintainer
 brew install AndrewDongminYoo/tap/imgen
 brew install AndrewDongminYoo/tap/brew-snapshot
 brew install AndrewDongminYoo/tap/node-snapshot
+brew install --HEAD AndrewDongminYoo/tap/histfix
 ```
 
 Or add the tap once, then install by short name:
@@ -41,6 +42,7 @@ Or add the tap once, then install by short name:
 ```bash
 brew tap AndrewDongminYoo/tap
 brew install maintainer imgen brew-snapshot node-snapshot
+brew install --HEAD histfix
 ```
 
 Each tool needs a one-time setup step — see its section below.
@@ -307,8 +309,10 @@ brew upgrade --fetch-HEAD AndrewDongminYoo/tap/histfix
 
 ## Uninstalling
 
+If you configured `histfix` in `.zshrc`, remove its `source` line before uninstalling.
+
 ```bash
-brew uninstall maintainer imgen brew-snapshot node-snapshot
+brew uninstall maintainer imgen brew-snapshot node-snapshot histfix
 brew untap AndrewDongminYoo/tap
 ```
 
