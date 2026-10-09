@@ -289,7 +289,6 @@ histfix undo
 ```
 
 The formula is HEAD-only until a stable release is prepared.
-For replacement and undo, start a fresh zsh session configured without `SHARE_HISTORY`.
 Close other shells sharing the history file before applying changes.
 See [source, setup, regex syntax, and shared-history limitations](https://github.com/AndrewDongminYoo/zsh-histfix).
 
