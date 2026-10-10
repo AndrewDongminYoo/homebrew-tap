@@ -21,7 +21,7 @@ A Homebrew tap with CLI tools for running and snapshotting a Mac development env
 - `imgen`: the [Codex CLI](https://github.com/openai/codex), which Homebrew does not package — install it with `npm install -g @openai/codex`. Apple Silicon only.
 - `brew-snapshot`: no extra dependencies.
 - `node-snapshot`: [nvm](https://github.com/nvm-sh/nvm) installed (loaded from `$NVM_DIR/nvm.sh`); `jq` is pulled in automatically as a formula dependency.
-- `histfix`: zsh 5.9 and Python 3.9 or newer; the HEAD formula installs Python 3.14.
+- `histfix`: zsh 5.9 and Python 3.9 or newer; the formula installs Python 3.14.
 
 `maintainer` and `imgen` ship a prebuilt binary rather than a script, and that binary is built on Apple Silicon; the formulae declare `arch: :arm64` so Homebrew refuses rather than installing something that cannot run.
 
@@ -34,15 +34,14 @@ brew install AndrewDongminYoo/tap/maintainer
 brew install AndrewDongminYoo/tap/imgen
 brew install AndrewDongminYoo/tap/brew-snapshot
 brew install AndrewDongminYoo/tap/node-snapshot
-brew install --HEAD AndrewDongminYoo/tap/histfix
+brew install AndrewDongminYoo/tap/histfix
 ```
 
 Or add the tap once, then install by short name:
 
 ```bash
 brew tap AndrewDongminYoo/tap
-brew install maintainer imgen brew-snapshot node-snapshot
-brew install --HEAD histfix
+brew install maintainer imgen brew-snapshot node-snapshot histfix
 ```
 
 Each tool needs a one-time setup step — see its section below.
@@ -278,17 +277,17 @@ To deliberately record an empty global set, pass `--force`.
 A zsh plugin for literal and regex replacements in history, with a preview, confirmation, and one-step undo.
 It preserves individual entries and excludes its own command invocations from replacement.
 
-Install the development version and load the plugin:
+Install the latest release and load the plugin:
 
 ```zsh
-brew install --HEAD AndrewDongminYoo/tap/histfix
+brew install AndrewDongminYoo/tap/histfix
 source "$(brew --prefix)/share/histfix/histfix.plugin.zsh"
 histfix replace 'gpt-6.1-astra' 'gpt-6-astra'
 histfix replace --regex 'gpt-6(?:\.\d+)?-(sol)' 'gpt-6.1-$1'
 histfix undo
 ```
 
-The formula is HEAD-only until a stable release is prepared.
+Install the `main` branch instead with `brew install --HEAD AndrewDongminYoo/tap/histfix`.
 Close other shells sharing the history file before applying changes.
 See [source, setup, regex syntax, and shared-history limitations](https://github.com/AndrewDongminYoo/zsh-histfix).
 
@@ -297,7 +296,7 @@ See [source, setup, regex syntax, and shared-history limitations](https://github
 ## Updating
 
 ```bash
-brew update && brew upgrade maintainer imgen brew-snapshot node-snapshot
+brew update && brew upgrade maintainer imgen brew-snapshot node-snapshot histfix
 ```
 
 To update a HEAD installation of `histfix`, fetch upstream changes explicitly:

@@ -1,6 +1,8 @@
 class Histfix < Formula
   desc "Find and replace zsh history with previews and regex capture groups"
   homepage "https://github.com/AndrewDongminYoo/zsh-histfix"
+  url "https://github.com/AndrewDongminYoo/zsh-histfix/archive/refs/tags/v0.1.0.tar.gz"
+  sha256 "6393c672d576b2cbd04aed934a139f6cc7912a11b4b7dc32fa9a388a486005cc"
   license "MIT"
   head "https://github.com/AndrewDongminYoo/zsh-histfix.git", branch: "main"
 
