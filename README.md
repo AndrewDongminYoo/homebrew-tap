@@ -295,6 +295,8 @@ See [source, setup, regex syntax, and shared-history limitations](https://github
 
 ## Updating
 
+List only the tools you installed: `brew upgrade` exits with an error for a formula that is not installed.
+
 ```bash
 brew update && brew upgrade maintainer imgen brew-snapshot node-snapshot histfix
 ```
