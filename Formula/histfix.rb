@@ -7,7 +7,7 @@ class Histfix < Formula
   depends_on "python@3.14"
 
   def install
-    (share/"histfix").install "histfix.plugin.zsh", "histfix.py"
+    (share/"histfix").install "histfix.plugin.zsh", "histfix.py", "_histfix"
     inreplace share/"histfix/histfix.plugin.zsh",
       ":-python3}", ":-#{formula_opt_bin("python@3.14")}/python3.14}"
     (pkgshare/"doc").install "README.md"
