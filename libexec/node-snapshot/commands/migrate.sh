@@ -40,10 +40,29 @@ if [[ "${from}" == "${to}" ]]; then
 else
     echo "→ Installing packages from lts/${from} lock into lts/${to} (v${to_version})"
 fi
+source_version="$(jq -r '.node_version // ""' "${lock_file}")"
+target_modules="$(npm root -g)"
 while IFS="=" read -r pkg version; do
     [[ -z "${pkg}" ]] && continue
-    echo "  npm install -g ${pkg}@${version}"
-    npm install -g "${pkg}@${version}"
+    install_spec="${pkg}@${version}"
+    if [[ "${version}" == file:* ]]; then
+        install_spec="${version}"
+    else
+        # Recover local sources from legacy locks that recorded only a version.
+        for modules_dir in "${NVM_DIR}/versions/node/v${source_version}/lib/node_modules" "${target_modules}"; do
+            if [[ -L "${modules_dir}/${pkg}" ]]; then
+                source_path="$(cd "${modules_dir}/${pkg}" && pwd -P)"
+                install_spec="file:${source_path}"
+                break
+            fi
+        done
+    fi
+    if [[ "${install_spec}" == file:* ]] && [[ ! -f "${install_spec#file:}/package.json" ]]; then
+        echo "error: local package source not found for ${pkg}: ${install_spec#file:}" >&2
+        exit 1
+    fi
+    echo "  npm install -g ${install_spec}"
+    npm install -g "${install_spec}"
 done < <(jq -r '.packages | to_entries[] | "\(.key)=\(.value)"' "${lock_file}" || true)
 
 "${_self_dir}/snapshot.sh" "${to}"

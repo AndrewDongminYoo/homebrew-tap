@@ -144,4 +144,86 @@ _assert_match "${output}" "add-zsh-hook"
 _assert_match "${output}" "node-snapshot upgrade --check"
 _pass "init: emits chpwd function and hook registration promptly"
 
+# ── local package restoration (isolated nvm/npm) ──────────────────────────────
+fixture="${TMPDIR_OPTIONS}/local-packages"
+mkdir -p "${fixture}/nvm/versions/node/v20.1.0/lib/node_modules/@local" \
+    "${fixture}/nvm/versions/node/v20.2.0/lib/node_modules" \
+    "${fixture}/nvm/alias/lts" "${fixture}/local package" "${fixture}/state"
+printf '{"name":"@local/agent","version":"0.2.0"}\n' > "${fixture}/local package/package.json"
+ln -s "${fixture}/local package" "${fixture}/nvm/versions/node/v20.1.0/lib/node_modules/@local/agent"
+printf 'v20.2.0\n' > "${fixture}/nvm/alias/lts/iron"
+cat > "${fixture}/nvm/nvm.sh" <<'SH'
+nvm() {
+    case "$1" in
+        use) export MOCK_VERSION=20.2.0 ;;
+        version-remote) echo v20.2.0 ;;
+        install|uninstall) return 0 ;;
+        *) return 91 ;;
+    esac
+}
+node() { echo "v${MOCK_VERSION:-20.1.0}"; }
+npm() {
+    local modules="${NVM_DIR}/versions/node/v${MOCK_VERSION:-20.1.0}/lib/node_modules"
+    case "$1" in
+        root) echo "${modules}" ;;
+        list)
+            if [[ -L "${modules}/@local/agent" ]]; then
+                printf '{"dependencies":{"@local/agent":{"version":"0.2.0","resolved":"file:relative/path"},"registry-pkg":{"version":"1.2.3"},"npm":{"version":"10.0.0"}}}\n'
+            else
+                printf '{"dependencies":{"registry-pkg":{"version":"1.2.3"}}}\n'
+            fi
+            ;;
+        install)
+            printf '%s\n' "$3" >> "${NVM_DIR}/calls"
+            case "$3" in
+                "file:${NVM_DIR}/../local package")
+                    mkdir -p "${modules}/@local"
+                    ln -sfn "${NVM_DIR}/../local package" "${modules}/@local/agent"
+                    ;;
+                "file:"*)
+                    [[ "$3" == "file:$(cd "${NVM_DIR}/../local package" && pwd -P)" ]] || return 92
+                    mkdir -p "${modules}/@local"
+                    ln -sfn "${3#file:}" "${modules}/@local/agent"
+                    ;;
+                registry-pkg@1.2.3) ;;
+                *) echo "Unexpected registry install: $3" >&2; return 93 ;;
+            esac
+            ;;
+        *) return 94 ;;
+    esac
+}
+SH
+local_source="file:$(cd "${fixture}/local package" && pwd -P)"
+seed_legacy_lock() {
+    printf '{"node_version":"20.1.0","packages":{"@local/agent":"0.2.0","registry-pkg":"1.2.3"}}\n' > "${fixture}/state/lts-iron.lock.json"
+    : > "${fixture}/nvm/calls"
+}
+seed_legacy_lock
+output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" upgrade iron 2>&1)" || _fail "upgrade must recover a local path from a legacy lock: ${output}"
+install_calls="$(< "${fixture}/nvm/calls")"
+[[ "${install_calls}" == "${local_source}"$'\nregistry-pkg@1.2.3' ]] || _fail "upgrade must use the local path and pinned registry version"
+jq -e --arg source "${local_source}" '.packages["@local/agent"] == $source and .packages["registry-pkg"] == "1.2.3" and (.packages | has("npm") | not)' "${fixture}/state/lts-iron.lock.json" >/dev/null || _fail "snapshot must preserve local source and exclude npm"
+_pass "upgrade: legacy local package path recovered and preserved in snapshot"
+
+: > "${fixture}/nvm/calls"
+output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" migrate iron iron 2>&1)" || _fail "migrate must restore a file source: ${output}"
+first_install_call="$(head -1 "${fixture}/nvm/calls")"
+[[ "${first_install_call}" == "${local_source}" ]] || _fail "file source was sent to the registry"
+_pass "migrate: file source with spaces restored"
+
+rm "${fixture}/nvm/versions/node/v20.2.0/lib/node_modules/@local/agent"
+: > "${fixture}/nvm/calls"
+output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" consolidate iron 2>&1)" || _fail "consolidate must preserve local sources: ${output}"
+install_calls="$(< "${fixture}/nvm/calls")"
+[[ "${install_calls}" == "${local_source}" ]] || _fail "consolidate did not install the local source"
+_pass "consolidate: scoped local link restored from older patch"
+
+printf '{"node_version":"20.1.0","packages":{"@local/agent":"file:/nonexistent/node-snapshot-local-package"}}\n' > "${fixture}/state/lts-iron.lock.json"
+: > "${fixture}/nvm/calls"
+command_exit=0
+output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" migrate iron iron 2>&1)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && ! -s "${fixture}/nvm/calls" ]] || _fail "missing local source must fail before npm install"
+_assert_match "${output}" "local package source not found"
+_pass "migrate: missing local source fails without registry fallback"
+
 echo ""; echo "All unit tests: PASS"
