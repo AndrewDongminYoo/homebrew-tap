@@ -42,7 +42,11 @@ _scan_modules_dir() {
                 local pkg_json="${scoped_entry}package.json"
                 [[ -f "${pkg_json}" ]] || continue
                 local ver
-                ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+                if [[ -L "${scoped_entry%/}" ]]; then
+                    ver="file:$(cd "${scoped_entry}" && pwd -P)"
+                else
+                    ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+                fi
                 [[ -n "${ver}" ]] && printf '%s=%s\n' "${scoped_name}" "${ver}"
             done
             continue
@@ -55,7 +59,11 @@ _scan_modules_dir() {
         local pkg_json="${entry}package.json"
         [[ -f "${pkg_json}" ]] || continue
         local ver
-        ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+        if [[ -L "${entry%/}" ]]; then
+            ver="file:$(cd "${entry}" && pwd -P)"
+        else
+            ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+        fi
         [[ -n "${ver}" ]] && printf '%s=%s\n' "${name}" "${ver}"
     done
 }
@@ -124,15 +132,21 @@ _consolidate_alias() {
             local current_ver=""
             local pkg_json="${target_modules}/${pkg}/package.json"
             if [[ -f "${pkg_json}" ]]; then
-                current_ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+                if [[ -L "${target_modules}/${pkg}" ]]; then
+                    current_ver="file:$(cd "${target_modules}/${pkg}" && pwd -P)"
+                else
+                    current_ver="$(jq -r '.version // ""' "${pkg_json}" 2>/dev/null || true)"
+                fi
             fi
 
             if [[ "${current_ver}" == "${want_ver}" ]]; then
                 echo "  ✓ ${pkg}@${want_ver}"
                 skipped=$(( skipped + 1 ))
             else
-                echo "  npm install -g ${pkg}@${want_ver}"
-                npm install -g "${pkg}@${want_ver}"
+                local install_spec="${pkg}@${want_ver}"
+                [[ "${want_ver}" == file:* ]] && install_spec="${want_ver}"
+                echo "  npm install -g ${install_spec}"
+                npm install -g "${install_spec}"
                 installed=$(( installed + 1 ))
             fi
         done < <(printf '%s' "${merged_json}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' || true)

@@ -31,6 +31,16 @@ _snapshot_alias() {
     echo "→ nvm use lts/${lts_alias} (v${node_version})"
     packages_json="$(npm list -g --depth=0 --json 2>/dev/null \
         | jq '.dependencies // {} | del(.npm) | del(.corepack) | to_entries | map({key: .key, value: .value.version}) | from_entries')"
+    # npm list reports a version even for links installed from a local directory.
+    local modules_dir pkg source_path
+    modules_dir="$(npm root -g)"
+    while IFS= read -r pkg; do
+        if [[ -L "${modules_dir}/${pkg}" && -d "${modules_dir}/${pkg}" ]]; then
+            source_path="$(cd "${modules_dir}/${pkg}" && pwd -P)"
+            packages_json="$(jq --arg pkg "${pkg}" --arg source "file:${source_path}" \
+                '.[$pkg] = $source' <<< "${packages_json}")"
+        fi
+    done < <(jq -r 'keys[]' <<< "${packages_json}" || true)
     now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     lock_file="${STATE_DIR}/lts-${lts_alias}.lock.json"
 

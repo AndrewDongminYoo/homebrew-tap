@@ -217,6 +217,12 @@ Stored in `~/.local/share/node-snapshot/` (override: `$NODE_SNAPSHOT_DIR`):
 | `lts-<alias>.lock.json` | Per-alias Node version and global package list  |
 | `last_snapshot_utc`     | Last snapshot timestamp                         |
 
+Registry packages retain pinned versions in the lock.
+Packages installed globally from local directories (including `npm install -g .` and `npm link`) retain their absolute source paths as `file:/path/to/package`.
+Migration and consolidation install these paths directly instead of looking up the package name in the npm registry.
+Legacy version-only locks recover local paths from links in the original or destination Node installation when available.
+Keep those source directories available when restoring a snapshot; a missing local source stops migration with an error.
+
 ### Consolidating packages across patch versions
 
 When you install a new Node patch (e.g. `v22.22.0` after `v22.21.1`), nvm does not automatically carry over global packages from the old installation. Over time, each patch version accumulates a different set of packages and the latest one is often the most bare.
