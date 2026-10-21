@@ -42,6 +42,9 @@ else
 fi
 source_version="$(jq -r '.node_version // ""' "${lock_file}")"
 target_modules="$(npm root -g)"
+# Resolve and validate every source first so a missing local package
+# cannot leave the destination partially migrated.
+install_specs=()
 while IFS="=" read -r pkg version; do
     [[ -z "${pkg}" ]] && continue
     install_spec="${pkg}@${version}"
@@ -50,7 +53,8 @@ while IFS="=" read -r pkg version; do
     else
         # Recover local sources from legacy locks that recorded only a version.
         for modules_dir in "${NVM_DIR}/versions/node/v${source_version}/lib/node_modules" "${target_modules}"; do
-            if [[ -L "${modules_dir}/${pkg}" ]]; then
+            # Skip broken links so a valid destination link can still be used.
+            if [[ -L "${modules_dir}/${pkg}" && -d "${modules_dir}/${pkg}" ]]; then
                 source_path="$(cd "${modules_dir}/${pkg}" && pwd -P)"
                 install_spec="file:${source_path}"
                 break
@@ -61,8 +65,12 @@ while IFS="=" read -r pkg version; do
         echo "error: local package source not found for ${pkg}: ${install_spec#file:}" >&2
         exit 1
     fi
+    install_specs+=("${install_spec}")
+done < <(jq -r '.packages | to_entries[] | "\(.key)=\(.value)"' "${lock_file}" || true)
+
+for install_spec in ${install_specs[@]+"${install_specs[@]}"}; do
     echo "  npm install -g ${install_spec}"
     npm install -g "${install_spec}"
-done < <(jq -r '.packages | to_entries[] | "\(.key)=\(.value)"' "${lock_file}" || true)
+done
 
 "${_self_dir}/snapshot.sh" "${to}"

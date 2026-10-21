@@ -35,7 +35,7 @@ _snapshot_alias() {
     local modules_dir pkg source_path
     modules_dir="$(npm root -g)"
     while IFS= read -r pkg; do
-        if [[ -L "${modules_dir}/${pkg}" ]]; then
+        if [[ -L "${modules_dir}/${pkg}" && -d "${modules_dir}/${pkg}" ]]; then
             source_path="$(cd "${modules_dir}/${pkg}" && pwd -P)"
             packages_json="$(jq --arg pkg "${pkg}" --arg source "file:${source_path}" \
                 '.[$pkg] = $source' <<< "${packages_json}")"

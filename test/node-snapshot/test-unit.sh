@@ -218,7 +218,14 @@ install_calls="$(< "${fixture}/nvm/calls")"
 [[ "${install_calls}" == "${local_source}" ]] || _fail "consolidate did not install the local source"
 _pass "consolidate: scoped local link restored from older patch"
 
-printf '{"node_version":"20.1.0","packages":{"@local/agent":"file:/nonexistent/node-snapshot-local-package"}}\n' > "${fixture}/state/lts-iron.lock.json"
+ln -sfn "${fixture}/missing source" "${fixture}/nvm/versions/node/v20.1.0/lib/node_modules/@local/agent"
+seed_legacy_lock
+output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" migrate iron iron 2>&1)" || _fail "migrate must skip a broken source link: ${output}"
+install_calls="$(< "${fixture}/nvm/calls")"
+[[ "${install_calls}" == "${local_source}"$'\nregistry-pkg@1.2.3' ]] || _fail "migrate must recover the local path from the destination link"
+_pass "migrate: broken source link falls back to destination link"
+
+printf '{"node_version":"20.1.0","packages":{"registry-pkg":"1.2.3","@local/agent":"file:/nonexistent/node-snapshot-local-package"}}\n' > "${fixture}/state/lts-iron.lock.json"
 : > "${fixture}/nvm/calls"
 command_exit=0
 output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" migrate iron iron 2>&1)" || command_exit=$?
