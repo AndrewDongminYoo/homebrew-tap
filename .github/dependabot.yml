@@ -3,7 +3,9 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      timezone: Asia/Seoul
     groups:
       github-actions:
         patterns: ["*"]
