@@ -7,13 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A Homebrew tap.
 `README.md` lists every formula the tap serves; this file covers only the ones whose source lives here.
 
-Two formulae package shell scripts built in this repository:
+The snapshot formulae package shell scripts built in this repository:
 
 - **`brew-snapshot`** — snapshot and restore Homebrew environments
 - **`node-snapshot`** — manage nvm LTS versions and global npm packages
 
-`Formula/imgen.rb` and `Formula/maintainer.rb` are packaging-only.
-Each points at a prebuilt Apple Silicon binary released from its own upstream repository, so nothing under `bin/`, `libexec/`, or `test/` belongs to them.
+`Formula/imgen.rb`, `Formula/maintainer.rb`, and `Formula/histfix.rb` are packaging-only.
+`imgen` and `maintainer` point at prebuilt Apple Silicon binaries released from their own upstream repositories.
+`histfix` installs a zsh plugin and Python script from its upstream source archive.
+Nothing under `bin/`, `libexec/`, or `test/` belongs to these packaging-only formulae.
 
 ## Common Commands
 
@@ -53,7 +55,8 @@ Both tools share the same dispatch pattern: `bin/<tool>` reads `$1` and `exec`s 
 
 ### Formula `inreplace`
 
-Each formula rewrites the `LIBEXEC_DIR` literal in its entry-point binary at install time to use the Homebrew prefix. If the LIBEXEC_DIR detection logic in a `bin/` script changes, update the corresponding `inreplace` regex in the formula.
+Both snapshot formulae rewrite the `LIBEXEC_DIR` literal in their entry-point scripts at install time to use the Homebrew prefix.
+If the LIBEXEC_DIR detection logic in a `bin/` script changes, update the corresponding `inreplace` regex in the formula.
 
 ## Adding a Subcommand
 
@@ -81,5 +84,5 @@ Pushing a semver tag (e.g. `v0.5.0`) triggers `.github/workflows/homebrew-releas
 
 Both formulas share one tarball URL and `sha256` (the repo archive), so the workflow keeps the formulas and the `bin/` `--version` output in lockstep: no manual version edits are needed before tagging.
 
-`Formula/imgen.rb` and `Formula/maintainer.rb` are outside this workflow.
-Their versions track releases in their own upstream repositories, so each bump is a hand-written commit editing `url`, `version`, and `sha256` in that one file.
+`Formula/imgen.rb`, `Formula/maintainer.rb`, and `Formula/histfix.rb` are outside this workflow.
+Their versions track releases in their own upstream repositories, so each bump is a hand-written commit editing `url`, `sha256`, and any explicit `version` in that one file.
