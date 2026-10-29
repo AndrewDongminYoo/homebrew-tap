@@ -273,7 +273,8 @@ To deliberately record an empty global set, pass `--force`.
 - Runs `node-snapshot upgrade --check` in the background on shell startup
 
 Questions are asked only in an interactive shell attached to a terminal, and each question once per shell.
-`nvm use` runs only when the active Node has to change, and the package-manager version check runs only for pnpm, npm or bun when `package.json` declares no `packageManager`, so entering a project again costs a few milliseconds.
+For a numeric requirement `nvm use` runs only when the active Node has to change; an alias such as `lts/jod` is passed to `nvm use` on every entry so that nvm resolves it.
+The package-manager version check runs only for pnpm, npm or bun when `package.json` declares no `packageManager`, so entering a project again costs a few milliseconds.
 Only `pnpm`, `yarn`, `npm` and `bun` are ever run, and Yarn's version is never checked, because `yarn --version` runs a project-local release when `.yarnrc.yml` sets `yarnPath`.
 The frozen-lockfile install runs only after you answer `y`.
 Source it from `.zshrc`: the hook belongs to interactive shells, not to `.zprofile` or `.zlogin`.
