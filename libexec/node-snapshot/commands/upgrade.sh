@@ -7,6 +7,9 @@ NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
 # shellcheck source=/dev/null
 if [[ -s "${NVM_DIR}/nvm.sh" ]]; then
     \. "${NVM_DIR}/nvm.sh"
+    # Drop nvm's PATH entry so `nvm use` prepends its bin. Otherwise nvm swaps
+    # the entry in place, behind any earlier node (e.g. a ~/.local/bin/node symlink).
+    nvm deactivate >/dev/null 2>&1 || true
 else
     echo "error: nvm not found at ${NVM_DIR}/nvm.sh" >&2
     echo "Install nvm: https://github.com/nvm-sh/nvm" >&2

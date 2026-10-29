@@ -8,6 +8,9 @@ NVM_DIR="${NVM_DIR:-${HOME}/.nvm}"
 # shellcheck source=/dev/null
 if [[ -s "${NVM_DIR}/nvm.sh" ]]; then
     \. "${NVM_DIR}/nvm.sh"
+    # Drop nvm's PATH entry so `nvm use` prepends its bin. Otherwise nvm swaps
+    # the entry in place, behind any earlier node (e.g. a ~/.local/bin/node symlink).
+    nvm deactivate >/dev/null 2>&1 || true
 else
     echo "error: nvm not found at ${NVM_DIR}/nvm.sh" >&2
     echo "Install nvm: https://github.com/nvm-sh/nvm" >&2
@@ -28,12 +31,23 @@ _snapshot_alias() {
 
     local packages_json node_version now lock_file
     node_version="$(node -v | tr -d 'v')"
+    # Refuse to record another Node's globals under this alias.
+    local expected_version
+    expected_version="$(nvm version "lts/${lts_alias}" | tr -d 'v')"
+    if [[ "${node_version}" != "${expected_version}" ]]; then
+        echo "✗ lts/${lts_alias}: node on PATH is v${node_version} ($(command -v node || true)), but nvm resolves v${expected_version}." >&2
+        return 1
+    fi
     echo "→ nvm use lts/${lts_alias} (v${node_version})"
     packages_json="$(npm list -g --depth=0 --json 2>/dev/null \
         | jq '.dependencies // {} | del(.npm) | del(.corepack) | to_entries | map({key: .key, value: .value.version}) | from_entries')"
     # npm list reports a version even for links installed from a local directory.
     local modules_dir pkg source_path
     modules_dir="$(npm root -g)"
+    if [[ "${modules_dir}" != "${NVM_DIR}/versions/node/v${node_version}/"* ]]; then
+        echo "✗ lts/${lts_alias}: npm on PATH ($(command -v npm || true)) reports global root ${modules_dir}, not under v${node_version}." >&2
+        return 1
+    fi
     while IFS= read -r pkg; do
         if [[ -L "${modules_dir}/${pkg}" && -d "${modules_dir}/${pkg}" ]]; then
             source_path="$(cd "${modules_dir}/${pkg}" && pwd -P)"

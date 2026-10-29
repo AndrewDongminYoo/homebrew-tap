@@ -156,7 +156,7 @@ cat > "${fixture}/nvm/nvm.sh" <<'SH'
 nvm() {
     case "$1" in
         use) export MOCK_VERSION=20.2.0 ;;
-        version-remote) echo v20.2.0 ;;
+        version|version-remote) echo v20.2.0 ;;
         install|uninstall) return 0 ;;
         *) return 91 ;;
     esac
@@ -232,5 +232,58 @@ output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}"
 [[ "${command_exit}" -ne 0 && ! -s "${fixture}/nvm/calls" ]] || _fail "missing local source must fail before npm install"
 _assert_match "${output}" "local package source not found"
 _pass "migrate: missing local source fails without registry fallback"
+
+# ── PATH shadowing (real executables, nvm-style in-place PATH swap) ───────────
+fixture="${TMPDIR_OPTIONS}/path-shadow"
+mkdir -p "${fixture}/shadow" "${fixture}/nvm/versions/node/v20.2.0/bin" "${fixture}/state"
+cat > "${fixture}/shadow/node" <<'SH'
+#!/bin/sh
+echo v24.20.0
+SH
+cat > "${fixture}/shadow/npm" <<'SH'
+#!/bin/sh
+case "$1" in
+    root) echo "$(dirname "$0")/lib/node_modules" ;;
+    list) echo '{"dependencies":{"shadow-pkg":{"version":"9.9.9"}}}' ;;
+esac
+SH
+cat > "${fixture}/nvm/versions/node/v20.2.0/bin/node" <<'SH'
+#!/bin/sh
+echo v20.2.0
+SH
+cat > "${fixture}/nvm/versions/node/v20.2.0/bin/npm" <<'SH'
+#!/bin/sh
+case "$1" in
+    root) echo "$(cd "$(dirname "$0")/.." && pwd)/lib/node_modules" ;;
+    list) echo '{"dependencies":{"real-pkg":{"version":"1.0.0"}}}' ;;
+esac
+SH
+chmod +x "${fixture}/shadow/node" "${fixture}/shadow/npm" \
+    "${fixture}/nvm/versions/node/v20.2.0/bin/node" "${fixture}/nvm/versions/node/v20.2.0/bin/npm"
+cat > "${fixture}/nvm/nvm.sh" <<'SH'
+nvm() {
+    local entry="${NVM_DIR}/versions/node/[^/:]*/bin"
+    local bin="${NVM_DIR}/versions/node/v20.2.0/bin"
+    case "$1" in
+        deactivate) PATH="$(sed -e "s#${entry}:##g" <<< "${PATH}")" ;;
+        use)
+            # Like nvm_change_path: swap an existing nvm entry in place, else prepend.
+            if grep -q "${entry}" <<< "${PATH}"; then
+                PATH="$(sed -e "s#${entry}#${bin}#" <<< "${PATH}")"
+            else
+                PATH="${bin}:${PATH}"
+            fi
+            ;;
+        version) echo v20.2.0 ;;
+        *) return 91 ;;
+    esac
+}
+SH
+output="$(PATH="${fixture}/shadow:${fixture}/nvm/versions/node/v20.1.0/bin:${PATH}" \
+    NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" snapshot iron 2>&1)" \
+    || _fail "snapshot must use nvm's node despite a shadowing node earlier in PATH: ${output}"
+jq -e '.node_version == "20.2.0" and .packages == {"real-pkg": "1.0.0"}' "${fixture}/state/lts-iron.lock.json" >/dev/null \
+    || _fail "snapshot recorded the shadowing node: $(< "${fixture}/state/lts-iron.lock.json")"
+_pass "snapshot: nvm's node wins over a node earlier in PATH"
 
 echo ""; echo "All unit tests: PASS"
