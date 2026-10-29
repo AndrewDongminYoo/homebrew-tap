@@ -144,6 +144,13 @@ _assert_match "${output}" "add-zsh-hook"
 _assert_match "${output}" "node-snapshot upgrade --check"
 _pass "init: emits chpwd function and hook registration promptly"
 
+command -v zsh >/dev/null 2>&1 || _fail "init: zsh is required for the init scenarios"
+if ! zsh -f "${SCRIPT_DIR}/test-init.zsh" > "${TMPDIR_STATE}/init-scenarios.log" 2>&1; then
+    cat "${TMPDIR_STATE}/init-scenarios.log"
+    _fail "init: zsh scenarios"
+fi
+_pass "init: zsh scenarios (version switch, prompts, package managers)"
+
 # ── local package restoration (isolated nvm/npm) ──────────────────────────────
 fixture="${TMPDIR_OPTIONS}/local-packages"
 mkdir -p "${fixture}/nvm/versions/node/v20.1.0/lib/node_modules/@local" \

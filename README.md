@@ -265,11 +265,19 @@ To deliberately record an empty global set, pass `--force`.
 
 ### Shell Integration
 
-`node-snapshot init` emits a zsh `chpwd` hook that:
+`node-snapshot init` emits a zsh `chpwd` hook that runs on shell startup and on every directory change into a Node project:
 
-- Automatically switches the active Node version when entering a directory with `.nvmrc` or `.node-version`
-- Prints the active Node, npm, and package manager versions on directory change
+- Reads the required version from `.nvmrc` (or `.node-version`) and switches nvm to the newest installed release of its major, so `22.23.2` selects the newest installed `22.x`
+- Prints how that release compares with the required version, then offers to write the installed release back when it is newer (`nvm use --save` for `.nvmrc`), or to install the required one when it is older or the major is missing (`node-snapshot upgrade <lts>`, or `nvm install` outside the LTS lines)
+- Prints the package manager from `packageManager` in `package.json` or from the lockfile (`pnpm-lock.yaml`, `bun.lock`/`bun.lockb`, `yarn.lock`, `package-lock.json`), and offers a frozen-lockfile install (`pnpm install --frozen-lockfile`, `yarn install --immutable`, `npm ci`, `bun install --frozen-lockfile`) when the dependencies are missing or older than the lockfile
 - Runs `node-snapshot upgrade --check` in the background on shell startup
+
+Questions are asked only in an interactive shell attached to a terminal, and each question once per shell.
+For a numeric requirement `nvm use` runs only when the active Node has to change; an alias such as `lts/jod` is passed to `nvm use` on every entry so that nvm resolves it.
+The package-manager version check runs only for pnpm, npm or bun when `package.json` declares no `packageManager`, so entering a project again costs a few milliseconds.
+Only `pnpm`, `yarn`, `npm` and `bun` are ever run, and Yarn's version is never checked, because `yarn --version` runs a project-local release when `.yarnrc.yml` sets `yarnPath`.
+The frozen-lockfile install runs only after you answer `y`.
+Source it from `.zshrc`: the hook belongs to interactive shells, not to `.zprofile` or `.zlogin`.
 
 ### What This Tool Does Not Do
 
