@@ -86,3 +86,11 @@ Both formulas share one tarball URL and `sha256` (the repo archive), so the work
 
 `Formula/imgen.rb`, `Formula/maintainer.rb`, and `Formula/histfix.rb` are outside this workflow.
 Their versions track releases in their own upstream repositories, so each bump is a hand-written commit editing `url`, `sha256`, and any explicit `version` in that one file.
+
+## Offline Secret Reader
+
+Run `python3 -B .trunk/configs/tests/test_trufflehog_to_sarif.py` for the separate standard-library tooling regressions.
+CI runs this exact file independently of the existing application checks.
+The configured filesystem scanner uses `--no-verification --no-update`; its local SARIF reader retains decoded findings without exposing secret values.
+Run `trunk check --all --no-fix --jobs=2` for the full configured quality scan.
+Other scanners may use advisory or tool metadata services; the filesystem flags do not make the entire Trunk run network-free.
