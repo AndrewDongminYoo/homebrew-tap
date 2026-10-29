@@ -118,6 +118,11 @@ _node_snapshot_node_check() {
     fi
     _node_snapshot_use "${newest}"
     active=$(_node_snapshot_active)
+    if [[ "${active}" != "${newest}" ]]; then
+        # Comparing another major with the requirement would offer to overwrite it, so stop here.
+        print -u2 -r -- "📦 nvm could not switch to node ${newest} for ${file} (${want}); active: v${active:-?}"
+        return 0
+    fi
 
     if [[ "${wanted}" != <->.<->.<-> || "${active}" == "${wanted}" ]]; then
         print -r -- "📦 node v${active} for ${file} (${want})"
@@ -155,6 +160,13 @@ _node_snapshot_deps_check() {
     else
         pm=npm
     fi
+    # packageManager comes from the repository, so a value such as "./pwn" must never be run.
+    case "${pm}" in
+        pnpm | yarn | npm | bun) ;;
+        *)
+            print -r -- "📦 unsupported packageManager: ${pm}"
+            return 0 ;;
+    esac
 
     if [[ -n "${declared}" ]]; then
         # pnpm 9.7+, Yarn 2+ and Corepack run the declared release, so do not start the tool.
@@ -162,7 +174,9 @@ _node_snapshot_deps_check() {
         print -r -- "📦 ${pm} ${version} (packageManager)"
     else
         if [[ -z "${_node_snapshot_pm_versions[${PWD}:${pm}]}" ]]; then
-            _node_snapshot_pm_versions[${PWD}:${pm}]=$(command "${pm}" --version 2>/dev/null || print -r -- '-')
+            # Corepack asks before downloading a release and waits on a terminal; with stderr
+            # discarded that question is invisible, so give the tool no terminal to wait on.
+            _node_snapshot_pm_versions[${PWD}:${pm}]=$(command "${pm}" --version </dev/null 2>/dev/null || print -r -- '-')
         fi
         version=${_node_snapshot_pm_versions[${PWD}:${pm}]}
         [[ "${version}" == - ]] && version=''

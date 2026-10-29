@@ -29,6 +29,7 @@ echo v$1" > "${NVM_DIR}/versions/node/v$1/bin/node"
 for tool in pnpm yarn npm bun; do
     print -r -- "#!/bin/sh
 echo \"${tool} \$*\" >> \"\${CALLS}\"
+[ -p /dev/stdin ] && echo \"${tool} stdin-open\" >> \"\${CALLS}\"
 [ \"\$1\" = --version ] && echo \"\${FAKE_PM_VERSION:-1.0.0}\"
 exit 0" > "${WORK}/bin/${tool}"
 done
@@ -43,6 +44,7 @@ chmod +x "${WORK}/bin/"*
 nvm() {
     print -r -- "nvm $*" >> "${CALLS}"
     local cmd=$1 save=0 v resolved; shift
+    [[ ${cmd} == use && -n ${FAKE_NVM_USE_FAILS} ]] && return 3
     if [[ ${cmd} == install ]]; then
         _install_node "${1#v}"
         set -- "$1"
@@ -140,6 +142,17 @@ check "pnpm-lock.yaml wins over package-lock.json" '[[ ${out} == *"pnpm 1.0.0"* 
 
 scenario n; print '{}' > package.json; : > package-lock.json; run
 check "package-lock.json alone uses npm ci" '[[ $(calls) == *"ask Run npm ci?"* ]]'
+
+scenario y; print 22.23.2 > .node-version; FAKE_NVM_USE_FAILS=1 run
+check "a failed switch stops before comparing another major" '[[ ${out} == *"nvm could not switch to node 22.23.4"* && $(calls) != *ask* && $(<.node-version) == 22.23.2 ]]'
+
+scenario y; print '{ "packageManager": "./pwn" }' > package.json
+print -r -- "#!/bin/sh
+echo pwned >> \"${CALLS}\"" > pwn; chmod +x pwn; run
+check "a path in packageManager is never executed" '[[ ${out} == *"unsupported packageManager: ./pwn"* && $(calls) != *pwned* ]]'
+
+scenario n; print '{}' > package.json; : > yarn.lock; print -n | run
+check "the package manager gets no open stdin" '[[ $(calls) == *"yarn --version"* && $(calls) != *stdin-open* ]]'
 
 scenario y; run
 check "outside a Node project prints nothing" '[[ -z ${out} ]]'
