@@ -63,6 +63,10 @@ nvm() {
     return 0
 }
 
+# Sourcing init runs the hook and starts `node-snapshot upgrade --check`, so only fakes may be on
+# PATH and the working directory must be the scratch tree before the first source.
+path=("${WORK}/bin" ${(s.:.)BASE_PATH})
+cd "${WORK}"
 source "${INIT}" >/dev/null 2>&1
 _node_snapshot_ask() { print -r -- "ask $2" >> "${CALLS}"; [[ ${ANSWER} == y ]]; }
 
@@ -126,10 +130,16 @@ check "touched but identical pnpm lockfile asks nothing" '[[ $(calls) != *ask* ]
 print b > pnpm-lock.yaml; run
 check "changed pnpm lockfile asks to install" '[[ $(calls) == *"ask Run pnpm install --frozen-lockfile?"* ]]'
 
-scenario n; print '{}' > package.json; : > yarn.lock; FAKE_PM_VERSION=1.22.22 run
-check "undeclared yarn 1 runs once and uses --frozen-lockfile" '[[ ${out} == *"yarn 1.22.22"* && $(calls) == *"ask Run yarn install --frozen-lockfile?"* ]]'
-: > "${CALLS}"; FAKE_PM_VERSION=1.22.22 run
-check "undeclared package manager version is cached per shell" '[[ $(calls) != *"yarn --version"* ]]'
+scenario n; print '{}' > package.json; : > yarn.lock; run
+check "undeclared yarn without .yarnrc.yml is Classic and never run" '[[ ${out} == *"yarn (Classic, version not checked)"* && $(calls) == *"ask Run yarn install --frozen-lockfile?"* && $(calls) != *"yarn --version"* ]]'
+
+scenario n; print '{}' > package.json; : > yarn.lock; print 'yarnPath: .yarn/releases/evil.cjs' > .yarnrc.yml; run
+check "undeclared yarn with .yarnrc.yml is Berry and never run" '[[ ${out} == *"yarn (Berry, version not checked)"* && $(calls) == *"ask Run yarn install --immutable?"* && $(calls) != *"yarn --version"* ]]'
+
+scenario n; print '{}' > package.json; : > pnpm-lock.yaml; FAKE_PM_VERSION=10.1.0 run
+check "undeclared pnpm version is checked" '[[ ${out} == *"pnpm 10.1.0"* && $(calls) == *"pnpm --version"* ]]'
+: > "${CALLS}"; FAKE_PM_VERSION=10.1.0 run
+check "undeclared package manager version is cached per shell" '[[ $(calls) != *"pnpm --version"* ]]'
 
 scenario n; print '{ "packageManager": "yarn@4.11.0" }' > package.json; : > yarn.lock; sleep 1; : > .pnp.cjs; run
 check "yarn 4 with an up-to-date .pnp.cjs asks nothing" '[[ ${out} == *"yarn 4.11.0 (packageManager)"* && $(calls) != *ask* ]]'
@@ -151,15 +161,18 @@ print -r -- "#!/bin/sh
 echo pwned >> \"${CALLS}\"" > pwn; chmod +x pwn; run
 check "a path in packageManager is never executed" '[[ ${out} == *"unsupported packageManager: ./pwn"* && $(calls) != *pwned* ]]'
 
-scenario n; print '{}' > package.json; : > yarn.lock; print -n | run
-check "the package manager gets no open stdin" '[[ $(calls) == *"yarn --version"* && $(calls) != *stdin-open* ]]'
+scenario n; print '{}' > package.json; : > package-lock.json; print -n | run
+check "the package manager gets no open stdin" '[[ $(calls) == *"npm --version"* && $(calls) != *stdin-open* ]]'
 
 scenario y; run
 check "outside a Node project prints nothing" '[[ -z ${out} ]]'
 
 unfunction _node_snapshot_ask
+cd "${WORK}"
 source "${INIT}" >/dev/null 2>&1
-check "without a terminal nothing is asked" '! _node_snapshot_ask key question </dev/null'
+_node_snapshot_asked=()
+# The guard returns before the key is recorded, so an empty key proves the guard decided.
+check "without a terminal nothing is asked" '! _node_snapshot_ask key question </dev/null && [[ -z ${_node_snapshot_asked[key]} ]]'
 
 (( failures == 0 )) || { print -r -- "${failures} init scenario(s) failed"; exit 1; }
 print -r -- "init scenarios passed"

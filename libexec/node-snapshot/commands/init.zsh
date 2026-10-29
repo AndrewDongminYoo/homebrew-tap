@@ -172,6 +172,12 @@ _node_snapshot_deps_check() {
         # pnpm 9.7+, Yarn 2+ and Corepack run the declared release, so do not start the tool.
         version=${declared}
         print -r -- "📦 ${pm} ${version} (packageManager)"
+    elif [[ "${pm}" == yarn ]]; then
+        # `yarn --version` runs the release that .yarnrc.yml yarnPath or .yarnrc yarn-path points
+        # at, which is repository code, so infer the line from the config files instead.
+        (( $+commands[yarn] )) && version=classic
+        [[ -n "${version}" && -f .yarnrc.yml ]] && version=berry
+        print -r -- "📦 yarn ${${version:+(${(C)version}, version not checked)}:-is not installed}"
     else
         if [[ -z "${_node_snapshot_pm_versions[${PWD}:${pm}]}" ]]; then
             # Corepack asks before downloading a release and waits on a terminal; with stderr
@@ -191,7 +197,7 @@ _node_snapshot_deps_check() {
             [[ -f bun.lock ]] || lockfile=bun.lockb ;;
         yarn)
             lockfile=yarn.lock install_cmd='yarn install --immutable'
-            [[ "${version}" == 1.* ]] && install_cmd='yarn install --frozen-lockfile'
+            [[ "${version}" == 1.* || "${version}" == classic ]] && install_cmd='yarn install --frozen-lockfile'
             if [[ -f .pnp.cjs ]]; then
                 target=.pnp.cjs
             elif [[ -f node_modules/.yarn-state.yml ]]; then
