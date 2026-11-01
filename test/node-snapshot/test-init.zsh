@@ -174,5 +174,14 @@ _node_snapshot_asked=()
 # The guard returns before the key is recorded, so an empty key proves the guard decided.
 check "without a terminal nothing is asked" '! _node_snapshot_ask key question </dev/null && [[ -z ${_node_snapshot_asked[key]} ]]'
 
+# Terminals such as Warp cannot start the shell while .zshrc waits for an answer, so a real
+# terminal must get no question while init is sourced, and the same question on the next cd.
+# script(1) gives zsh a pseudo-terminal and turns its empty stdin into an EOF answer.
+scenario n; print '{ "packageManager": "pnpm@11.23.0" }' > package.json; : > pnpm-lock.yaml
+script -q "${WORK}/tty" zsh -f -i -c "source ${(q)INIT}; print SOURCED; cd ." </dev/null >/dev/null 2>&1 || true
+out=${"$(<"${WORK}/tty")"//$'\r'}
+check "a terminal gets no question while init is sourced" '[[ ${out} == *"pnpm install --frozen-lockfile? Run cd . to answer."*SOURCED* && ${out%%SOURCED*} != *"[y/N]"* ]]'
+check "the next cd asks the question" '[[ ${out#*SOURCED} == *"Run pnpm install --frozen-lockfile? [y/N]"* ]]'
+
 (( failures == 0 )) || { print -r -- "${failures} init scenario(s) failed"; exit 1; }
 print -r -- "init scenarios passed"
