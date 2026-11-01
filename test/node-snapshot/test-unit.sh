@@ -225,6 +225,17 @@ install_calls="$(< "${fixture}/nvm/calls")"
 [[ "${install_calls}" == "${local_source}" ]] || _fail "consolidate did not install the local source"
 _pass "consolidate: scoped local link restored from older patch"
 
+# With one patch per major there is nothing to uninstall, and that is not a failure.
+single="${TMPDIR_OPTIONS}/single-patch"
+mkdir -p "${single}/nvm/versions/node/v20.2.0/lib/node_modules" "${single}/nvm/alias/lts" "${single}/state"
+cp "${fixture}/nvm/nvm.sh" "${single}/nvm/nvm.sh"
+printf 'v20.2.0\n' > "${single}/nvm/alias/lts/iron"
+printf '{"tracked":["iron"],"check_interval_days":7,"last_check_utc":""}\n' > "${single}/state/config.json"
+output="$(NVM_DIR="${single}/nvm" NODE_SNAPSHOT_DIR="${single}/state" "${BIN}" consolidate iron 2>&1)" || _fail "consolidate iron with one patch must exit 0: ${output}"
+output="$(NVM_DIR="${single}/nvm" NODE_SNAPSHOT_DIR="${single}/state" "${BIN}" consolidate 2>&1)" || _fail "consolidate with one patch must exit 0: ${output}"
+[[ "${output}" != *"consolidate failed"* ]] || _fail "consolidate with one patch reported a failure: ${output}"
+_pass "consolidate: one patch per major succeeds with nothing to remove"
+
 ln -sfn "${fixture}/missing source" "${fixture}/nvm/versions/node/v20.1.0/lib/node_modules/@local/agent"
 seed_legacy_lock
 output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" migrate iron iron 2>&1)" || _fail "migrate must skip a broken source link: ${output}"

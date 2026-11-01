@@ -170,7 +170,10 @@ _consolidate_alias() {
             echo "  ⚠ failed to uninstall v${patch_ver}" >&2
         removed=$(( removed + 1 ))
     done
-    [[ "${removed}" -gt 0 ]] && echo "  removed ${removed} old version(s)"
+    # An if keeps "nothing to remove" from becoming the function's exit status.
+    if [[ "${removed}" -gt 0 ]]; then
+        echo "  removed ${removed} old version(s)"
+    fi
 }
 
 _ensure_config
