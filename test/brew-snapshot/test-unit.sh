@@ -221,6 +221,10 @@ plist_value() { plutil -extract "$1" raw "${plist}" 2>/dev/null || true; }
 [[ "$(plist_value StandardOutPath)" == "${setup_fixture}/state/snapshot.stdout.log" ]] \
   || _fail "StandardOutPath was not written verbatim: $(plist_value StandardOutPath)"
 [[ "$(plist_value Label)" == "com.tester.brew-snapshot" ]] || _fail "Label: $(plist_value Label)"
+# plutil -replace on an array index inserts, so check the whole argument list.
+program_args="$(plutil -extract ProgramArguments json -o - "${plist}")"
+jq -e 'length == 2 and (.[0] | endswith("/bin/brew-snapshot")) and .[1] == "snapshot"' <<< "${program_args}" >/dev/null \
+  || _fail "ProgramArguments must be [brew-snapshot, snapshot]: ${program_args}"
 _assert_match "$(< "${setup_fixture}/calls")" "launchctl load ${plist}"
 _pass "setup: LaunchAgent PATH starts with brew's absolute directory, paths kept verbatim"
 

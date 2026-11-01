@@ -39,7 +39,9 @@ mkdir -p "${HOME}/Library/LaunchAgents"
 cp "${PLIST_TEMPLATE}" "${PLIST_DEST}"
 plutil -replace EnvironmentVariables.PATH -string "${LAUNCHD_PATH}" "${PLIST_DEST}"
 plutil -replace Label -string "com.${USER}.brew-snapshot" "${PLIST_DEST}"
-plutil -replace ProgramArguments.0 -string "${BREW_SNAPSHOT_BIN}" "${PLIST_DEST}"
+# -replace on an array index inserts before that element, so remove the placeholder first.
+plutil -remove ProgramArguments.0 "${PLIST_DEST}"
+plutil -insert ProgramArguments.0 -string "${BREW_SNAPSHOT_BIN}" "${PLIST_DEST}"
 plutil -replace StandardErrorPath -string "${STATE_DIR}/snapshot.stderr.log" "${PLIST_DEST}"
 plutil -replace StandardOutPath -string "${STATE_DIR}/snapshot.stdout.log" "${PLIST_DEST}"
 
