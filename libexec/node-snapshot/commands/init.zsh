@@ -9,15 +9,23 @@
 #   3. prints the package manager and offers a frozen-lockfile install when the dependencies
 #      are missing or older than the lockfile.
 # Questions are asked only in an interactive shell with a terminal, and each one once per shell.
+# No question is asked while this file is sourced: terminals such as Warp cannot start the shell
+# until .zshrc returns, so the check at shell start prints the question and `cd .` asks it.
 # `nvm use` costs about 300 ms, so it runs only when the active node must change; the package
 # manager runs only when package.json declares no packageManager, and its version is cached.
 
 typeset -gA _node_snapshot_asked _node_snapshot_pm_versions
+typeset -gi _node_snapshot_starting=0
 
 # _node_snapshot_ask <key> <question>: returns 0 when the answer is y.
 _node_snapshot_ask() {
     [[ -o interactive && -t 0 && -t 1 ]] || return 1
     [[ -n "${_node_snapshot_asked[$1]}" ]] && return 1
+    if (( _node_snapshot_starting )); then
+        # Leave the key unrecorded so that the next chpwd in this directory asks.
+        print -r -- "📦 $2 Run cd . to answer."
+        return 1
+    fi
     _node_snapshot_asked[$1]=1
     local answer
     read -q "answer?📦 $2 [y/N] "
@@ -233,6 +241,7 @@ _node_snapshot_chpwd() {
 
 autoload -Uz add-zsh-hook
 add-zsh-hook chpwd _node_snapshot_chpwd
-_node_snapshot_chpwd
+_node_snapshot_starting=1
+{ _node_snapshot_chpwd } always { _node_snapshot_starting=0 }
 
-(node-snapshot upgrade --check 2>/dev/null &)
+(node-snapshot upgrade --check </dev/null 2>/dev/null &)
