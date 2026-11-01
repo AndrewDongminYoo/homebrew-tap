@@ -225,6 +225,88 @@ install_calls="$(< "${fixture}/nvm/calls")"
 [[ "${install_calls}" == "${local_source}" ]] || _fail "consolidate did not install the local source"
 _pass "consolidate: scoped local link restored from older patch"
 
+# With one patch per major there is nothing to uninstall, and that is not a failure.
+single="${TMPDIR_OPTIONS}/single-patch"
+mkdir -p "${single}/nvm/versions/node/v20.2.0/lib/node_modules" "${single}/nvm/alias/lts" "${single}/state"
+cp "${fixture}/nvm/nvm.sh" "${single}/nvm/nvm.sh"
+printf 'v20.2.0\n' > "${single}/nvm/alias/lts/iron"
+printf '{"tracked":["iron"],"check_interval_days":7,"last_check_utc":""}\n' > "${single}/state/config.json"
+output="$(NVM_DIR="${single}/nvm" NODE_SNAPSHOT_DIR="${single}/state" "${BIN}" consolidate iron 2>&1)" || _fail "consolidate iron with one patch must exit 0: ${output}"
+output="$(NVM_DIR="${single}/nvm" NODE_SNAPSHOT_DIR="${single}/state" "${BIN}" consolidate 2>&1)" || _fail "consolidate with one patch must exit 0: ${output}"
+[[ "${output}" != *"consolidate failed"* ]] || _fail "consolidate with one patch reported a failure: ${output}"
+_pass "consolidate: one patch per major succeeds with nothing to remove"
+
+# consolidate uninstalls older patches, so every failure before that point must keep them.
+# The mock records installs and uninstalls; its npm install reads stdin like a lifecycle script.
+make_consolidate_fixture() {
+    local dir="$1" alias_version="$2"
+    rm -rf "${dir}"
+    mkdir -p "${dir}/nvm/versions/node/v20.1.0/lib/node_modules/pkg-a" \
+        "${dir}/nvm/versions/node/v20.1.0/lib/node_modules/pkg-b" \
+        "${dir}/nvm/versions/node/v20.2.0/lib/node_modules" "${dir}/nvm/alias/lts" "${dir}/state"
+    printf '{"name":"pkg-a","version":"1.0.0"}\n' > "${dir}/nvm/versions/node/v20.1.0/lib/node_modules/pkg-a/package.json"
+    printf '{"name":"pkg-b","version":"1.0.0"}\n' > "${dir}/nvm/versions/node/v20.1.0/lib/node_modules/pkg-b/package.json"
+    printf '%s\n' "${alias_version}" > "${dir}/nvm/alias/lts/iron"
+    printf '{"tracked":["iron"],"check_interval_days":7,"last_check_utc":""}\n' > "${dir}/state/config.json"
+    : > "${dir}/nvm/calls"
+    cat > "${dir}/nvm/nvm.sh" <<'SH'
+_mock_resolve() {
+    local v="$1"
+    [[ "${v}" == lts/* ]] && v="$(< "${NVM_DIR}/alias/lts/${v#lts/}")"
+    [[ -d "${NVM_DIR}/versions/node/${v}" ]] && echo "${v}" || echo N/A
+}
+nvm() {
+    case "$1" in
+        deactivate) return 0 ;;
+        use)
+            local v; v="$(_mock_resolve "$2")"
+            [[ "${v}" != N/A ]] || return 3
+            export MOCK_VERSION="${v#v}" ;;
+        version) _mock_resolve "$2" ;;
+        uninstall) echo "uninstall $2" >> "${NVM_DIR}/calls" ;;
+        *) return 91 ;;
+    esac
+}
+node() { echo "v${MOCK_VERSION:-0}"; }
+npm() {
+    local modules="${NVM_DIR}/versions/node/v${MOCK_VERSION:-0}/lib/node_modules"
+    case "$1" in
+        root) echo "${modules}" ;;
+        list) echo '{"dependencies":{}}' ;;
+        install)
+            cat > /dev/null
+            echo "install $3" >> "${NVM_DIR}/calls"
+            [[ "$3" != "${MOCK_FAIL_SPEC:-}" ]] || return 1
+            mkdir -p "${modules}/${3%@*}"
+            printf '{"version":"%s"}\n' "${3##*@}" > "${modules}/${3%@*}/package.json" ;;
+        *) return 94 ;;
+    esac
+}
+SH
+}
+cfix="${TMPDIR_OPTIONS}/consolidate-safety"
+
+make_consolidate_fixture "${cfix}" v20.2.0
+output="$(NVM_DIR="${cfix}/nvm" NODE_SNAPSHOT_DIR="${cfix}/state" "${BIN}" consolidate 2>&1)" || _fail "consolidate must succeed: ${output}"
+calls="$(< "${cfix}/nvm/calls")"
+[[ "${calls}" == *"install pkg-a@1.0.0"* && "${calls}" == *"install pkg-b@1.0.0"* && "${calls}" == *"uninstall v20.1.0"* ]] \
+    || _fail "an install that reads stdin must not swallow the remaining packages: ${calls}"
+_pass "consolidate: npm install gets no package list on stdin"
+
+make_consolidate_fixture "${cfix}" v20.2.0
+output="$(MOCK_FAIL_SPEC=pkg-a@1.0.0 NVM_DIR="${cfix}/nvm" NODE_SNAPSHOT_DIR="${cfix}/state" "${BIN}" consolidate 2>&1)" || true
+calls="$(< "${cfix}/nvm/calls")"
+[[ "${calls}" != *uninstall* && "${output}" == *"consolidate failed"* ]] \
+    || _fail "a failed npm install must keep the older patches: ${calls} / ${output}"
+_pass "consolidate: failed npm install keeps the older patches"
+
+make_consolidate_fixture "${cfix}" v20.3.0
+output="$(NVM_DIR="${cfix}/nvm" NODE_SNAPSHOT_DIR="${cfix}/state" "${BIN}" consolidate 2>&1)" || true
+calls="$(< "${cfix}/nvm/calls")"
+[[ -z "${calls}" && "${output}" == *"v20.3.0, which is not installed"* ]] \
+    || _fail "an LTS alias ahead of the installs must stop consolidate before any change: ${calls} / ${output}"
+_pass "consolidate: LTS alias pointing at an uninstalled release changes nothing"
+
 ln -sfn "${fixture}/missing source" "${fixture}/nvm/versions/node/v20.1.0/lib/node_modules/@local/agent"
 seed_legacy_lock
 output="$(NVM_DIR="${fixture}/nvm" NODE_SNAPSHOT_DIR="${fixture}/state" "${BIN}" migrate iron iron 2>&1)" || _fail "migrate must skip a broken source link: ${output}"
