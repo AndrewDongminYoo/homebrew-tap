@@ -347,7 +347,14 @@ node() { echo "v${MOCK_VERSION:-0}"; }
 npm() {
     case "$1" in
         root) echo "${NVM_DIR}/versions/node/v${MOCK_VERSION:-0}/lib/node_modules" ;;
-        list) echo '{"dependencies":{"pkg":{"version":"1.0.0"}}}'; return "${MOCK_NPM_LIST_EXIT:-0}" ;;
+        list)
+            if [[ -n "${MOCK_NPM_LIST_JSON:-}" ]]; then
+                echo "${MOCK_NPM_LIST_JSON}"
+            else
+                echo '{"dependencies":{"pkg":{"version":"1.0.0"}}}'
+            fi
+            return "${MOCK_NPM_LIST_EXIT:-0}" ;;
+        install) echo "npm $*" >> "${NVM_DIR}/calls" ;;
         *) return 94 ;;
     esac
 }
@@ -362,6 +369,13 @@ output="$(unode upgrade iron)" || _fail "upgrade must not pass an uninstalled ve
 [[ "$(< "${ufix}/nvm/calls")" == "install lts/iron --latest-npm" ]] || _fail "unexpected install: $(< "${ufix}/nvm/calls")"
 _pass "upgrade: a lock version that is not installed is restored from the lock"
 
+# The lock names the newest release, which nvm installs, so old and new versions match.
+make_upgrade_fixture "${ufix}"
+printf '{"node_version":"20.3.0","packages":{"pkg-x":"1.0.0"}}\n' > "${ufix}/state/lts-iron.lock.json"
+output="$(unode upgrade iron)" || _fail "upgrade must restore a lock whose version it just installed: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" == *"npm install -g pkg-x@1.0.0"* ]] || _fail "packages were not restored from the lock: $(< "${ufix}/nvm/calls")"
+_pass "upgrade: a lock version installed by this upgrade is restored from the lock"
+
 make_upgrade_fixture "${ufix}"
 command_exit=0
 output="$(MOCK_FAIL_INSTALL=lts/iron unode upgrade)" || command_exit=$?
@@ -373,6 +387,13 @@ make_upgrade_fixture "${ufix}"
 output="$(MOCK_NPM_LIST_EXIT=1 unode snapshot iron)" || _fail "snapshot must accept npm list output with a non-zero status: ${output}"
 jq -e '.packages == {"pkg": "1.0.0"}' "${ufix}/state/lts-iron.lock.json" >/dev/null || _fail "snapshot did not record the listed packages"
 _pass "snapshot: npm list ELSPROBLEMS exit still records the packages"
+
+make_upgrade_fixture "${ufix}"
+rm "${ufix}/state/lts-iron.lock.json"
+command_exit=0
+output="$(MOCK_NPM_LIST_EXIT=1 MOCK_NPM_LIST_JSON='{"error":{"code":"EFAIL"}}' unode snapshot iron)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && ! -e "${ufix}/state/lts-iron.lock.json" ]] || _fail "a failed npm list must not be recorded as no packages: ${output}"
+_pass "snapshot: a failed npm list without dependencies records nothing"
 
 make_upgrade_fixture "${ufix}"
 output="$(MOCK_OFFLINE=1 unode upgrade --check)" || _fail "upgrade --check failed offline: ${output}"

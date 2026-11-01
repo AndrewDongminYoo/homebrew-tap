@@ -40,9 +40,16 @@ _snapshot_alias() {
     fi
     echo "→ nvm use lts/${lts_alias} (v${node_version})"
     # npm list exits 1 when a global package has a dependency problem (ELSPROBLEMS) but still
-    # prints the JSON, so judge the output rather than the status.
-    packages_json="$( { npm list -g --depth=0 --json 2>/dev/null || true; } \
-        | jq '.dependencies // {} | del(.npm) | del(.corepack) | to_entries | map({key: .key, value: .value.version}) | from_entries')"
+    # prints the dependencies. Accept a non-zero status only with that object, so an error
+    # report is never recorded as an empty package list.
+    local npm_json npm_status=0
+    npm_json="$(npm list -g --depth=0 --json 2>/dev/null)" || npm_status=$?
+    if [[ "${npm_status}" -ne 0 ]] \
+        && ! jq -e '(.dependencies | type) == "object"' <<< "${npm_json}" >/dev/null 2>&1; then
+        echo "✗ lts/${lts_alias}: npm list -g failed (exit ${npm_status}) without a package list" >&2
+        return 1
+    fi
+    packages_json="$(jq '.dependencies // {} | del(.npm) | del(.corepack) | to_entries | map({key: .key, value: .value.version}) | from_entries' <<< "${npm_json}")"
     if [[ -z "${packages_json}" ]]; then
         echo "✗ lts/${lts_alias}: npm list -g printed no package list" >&2
         return 1

@@ -79,6 +79,12 @@ _upgrade_alias() {
     if [[ -f "${lock_file}" ]]; then
         old_node_version="$(jq -r '.node_version // ""' "${lock_file}" 2>/dev/null || echo '')"
     fi
+    # On a Mac restored from the lock the locked version is not installed; its packages then
+    # come from the lock even when nvm installs that same version below.
+    local old_node_installed=false
+    if [[ -n "${old_node_version}" && -d "${NVM_DIR}/versions/node/v${old_node_version}" ]]; then
+        old_node_installed=true
+    fi
 
     # Resolve the target version before installing so the reinstall flag is only
     # added on an actual version bump — nvm exits non-zero when asked to
@@ -94,7 +100,7 @@ _upgrade_alias() {
     # Mac restored from the lock; migrate.sh below then restores the packages from the lock.
     if [[ -n "${old_node_version}" ]] && [[ -n "${target_version}" ]] \
         && [[ "${old_node_version}" != "${target_version}" ]] \
-        && [[ -d "${NVM_DIR}/versions/node/v${old_node_version}" ]]; then
+        && ${old_node_installed}; then
         echo "→ nvm install lts/${lts_alias} --latest-npm --reinstall-packages-from=${old_node_version}"
         nvm install "lts/${lts_alias}" --latest-npm --reinstall-packages-from="${old_node_version}"
     else
@@ -105,7 +111,8 @@ _upgrade_alias() {
     local new_node_version
     new_node_version="$(node -v | tr -d 'v')"
 
-    if [[ -n "${old_node_version}" ]] && [[ "${old_node_version}" != "${new_node_version}" ]]; then
+    if [[ -n "${old_node_version}" ]] \
+        && [[ "${old_node_version}" != "${new_node_version}" || "${old_node_installed}" == false ]]; then
         echo "→ migrating packages (${old_node_version} → ${new_node_version})"
         "${_self_dir}/migrate.sh" "${lts_alias}" "${lts_alias}"
         # migrate.sh runs snapshot internally
