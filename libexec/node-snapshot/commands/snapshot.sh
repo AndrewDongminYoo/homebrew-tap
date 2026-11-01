@@ -39,8 +39,14 @@ _snapshot_alias() {
         return 1
     fi
     echo "→ nvm use lts/${lts_alias} (v${node_version})"
-    packages_json="$(npm list -g --depth=0 --json 2>/dev/null \
+    # npm list exits 1 when a global package has a dependency problem (ELSPROBLEMS) but still
+    # prints the JSON, so judge the output rather than the status.
+    packages_json="$( { npm list -g --depth=0 --json 2>/dev/null || true; } \
         | jq '.dependencies // {} | del(.npm) | del(.corepack) | to_entries | map({key: .key, value: .value.version}) | from_entries')"
+    if [[ -z "${packages_json}" ]]; then
+        echo "✗ lts/${lts_alias}: npm list -g printed no package list" >&2
+        return 1
+    fi
     # npm list reports a version even for links installed from a local directory.
     local modules_dir pkg source_path
     modules_dir="$(npm root -g)"
