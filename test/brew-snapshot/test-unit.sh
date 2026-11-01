@@ -221,6 +221,9 @@ plist_value() { plutil -extract "$1" raw "${plist}" 2>/dev/null || true; }
 [[ "$(plist_value StandardOutPath)" == "${setup_fixture}/state/snapshot.stdout.log" ]] \
   || _fail "StandardOutPath was not written verbatim: $(plist_value StandardOutPath)"
 [[ "$(plist_value Label)" == "com.tester.brew-snapshot" ]] || _fail "Label: $(plist_value Label)"
+# launchd does not read the login shell's exports, so the agent must get the state dir from the plist.
+[[ "$(plist_value EnvironmentVariables.BREW_SNAPSHOT_DIR)" == "${setup_fixture}/state" ]] \
+  || _fail "LaunchAgent must snapshot into the state dir setup used: $(plist_value EnvironmentVariables.BREW_SNAPSHOT_DIR)"
 # plutil -replace on an array index inserts, so check the whole argument list.
 program_args="$(plutil -extract ProgramArguments json -o - "${plist}")"
 jq -e 'length == 2 and (.[0] | endswith("/bin/brew-snapshot")) and .[1] == "snapshot"' <<< "${program_args}" >/dev/null \

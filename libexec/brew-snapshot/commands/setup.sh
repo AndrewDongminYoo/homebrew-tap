@@ -37,6 +37,8 @@ mkdir -p "${HOME}/Library/LaunchAgents"
 # plutil writes each value as a plist string, so a path may hold any character,
 # including the & and | that a sed replacement would interpret.
 cp "${PLIST_TEMPLATE}" "${PLIST_DEST}"
+# launchd does not read the login shell's exports, so pass the state dir that the log paths use.
+plutil -replace EnvironmentVariables.BREW_SNAPSHOT_DIR -string "${STATE_DIR}" "${PLIST_DEST}"
 plutil -replace EnvironmentVariables.PATH -string "${LAUNCHD_PATH}" "${PLIST_DEST}"
 plutil -replace Label -string "com.${USER}.brew-snapshot" "${PLIST_DEST}"
 # -replace on an array index inserts before that element, so remove the placeholder first.
