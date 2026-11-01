@@ -84,6 +84,14 @@ _consolidate_alias() {
     latest_ver="$(tr -d 'v' < "${alias_file}")"  # e.g. "20.20.2"
     major="${latest_ver%%.*}"                      # e.g. "20"
 
+    # `nvm ls-remote` (run by `upgrade --check`) rewrites the alias to the newest remote
+    # release. Every installed patch differs from one that is not installed, so stop here.
+    if [[ ! -d "${NVM_DIR}/versions/node/v${latest_ver}" ]]; then
+        echo "✗ lts/${lts_alias} resolves to v${latest_ver}, which is not installed." >&2
+        echo "  Run node-snapshot upgrade ${lts_alias} first." >&2
+        return 1
+    fi
+
     echo "→ lts/${lts_alias}: consolidating v${major}.x.x → v${latest_ver}"
 
     # Collect all installed patch directories for this major, oldest → newest
@@ -101,6 +109,10 @@ _consolidate_alias() {
     version_list="$(for d in "${patch_dirs[@]}"; do basename "${d}"; done | tr '\n' ' ')"
     echo "  scanning: ${version_list}"
 
+    # The older patches are uninstalled at the end. The loop over all aliases runs this
+    # function on the left of ||, where set -e is off, so every step before the uninstall
+    # checks its own status and returns.
+
     # Merge packages across all patches. Process oldest→newest so that
     # a newer patch's version of a package overrides an older one.
     local merged_json
@@ -115,17 +127,18 @@ _consolidate_alias() {
             | map({key: .[0], value: (.[1:] | join("="))})
             | from_entries
         '
-    )"
+    )" || { echo "✗ lts/${lts_alias}: could not read the installed packages" >&2; return 1; }
 
     local total
-    total="$(printf '%s' "${merged_json}" | jq 'length')"
+    total="$(printf '%s' "${merged_json}" | jq 'length')" || return 1
 
     if [[ "${total}" -eq 0 ]]; then
         echo "  no user-installed packages found across v${major}.x.x"
     else
         echo "  ${total} unique package(s) found"
 
-        nvm use "lts/${lts_alias}" >/dev/null 2>&1
+        nvm use "lts/${lts_alias}" >/dev/null 2>&1 \
+            || { echo "✗ lts/${lts_alias}: nvm use failed" >&2; return 1; }
         local target_modules="${NVM_DIR}/versions/node/v${latest_ver}/lib/node_modules"
 
         local installed=0 skipped=0
@@ -149,15 +162,22 @@ _consolidate_alias() {
                 local install_spec="${pkg}@${want_ver}"
                 [[ "${want_ver}" == file:* ]] && install_spec="${want_ver}"
                 echo "  npm install -g ${install_spec}"
-                npm install -g "${install_spec}"
+                # Without </dev/null the install inherits the rest of the package list on stdin.
+                npm install -g "${install_spec}" </dev/null \
+                    || { echo "✗ lts/${lts_alias}: npm install -g ${install_spec} failed; older patches kept" >&2; return 1; }
                 installed=$(( installed + 1 ))
             fi
         done < <(printf '%s' "${merged_json}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' || true)
 
         echo "  installed: ${installed}, already present: ${skipped}"
+        if [[ $(( installed + skipped )) -ne "${total}" ]]; then
+            echo "✗ lts/${lts_alias}: handled $(( installed + skipped )) of ${total} package(s); older patches kept" >&2
+            return 1
+        fi
     fi
 
-    "${_self_dir}/snapshot.sh" "${lts_alias}"
+    "${_self_dir}/snapshot.sh" "${lts_alias}" \
+        || { echo "✗ lts/${lts_alias}: snapshot failed; older patches kept" >&2; return 1; }
 
     # Uninstall all patch versions except the latest
     local removed=0
