@@ -22,9 +22,19 @@ fi
 PLIST_DEST="${HOME}/Library/LaunchAgents/com.${USER}.brew-snapshot.plist"
 BREW_SNAPSHOT_BIN="$(command -v brew-snapshot || echo "${_commands_dir}/../../../bin/brew-snapshot")"
 
+# launchd starts agents with PATH=/usr/bin:/bin:/usr/sbin:/sbin, which has no Homebrew,
+# so record the directory that holds brew now.
+BREW_BIN="$(command -v brew || true)"
+if [[ -z "${BREW_BIN}" ]]; then
+  echo "Error: brew not found on PATH" >&2
+  exit 1
+fi
+LAUNCHD_PATH="$(dirname "${BREW_BIN}"):/usr/bin:/bin:/usr/sbin:/sbin"
+
 mkdir -p "${HOME}/Library/LaunchAgents"
 
 sed \
+  -e "s|__PATH__|${LAUNCHD_PATH}|g" \
   -e "s|__USER__|${USER}|g" \
   -e "s|__STATE_DIR__|${STATE_DIR}|g" \
   -e "s|__BIN__|${BREW_SNAPSHOT_BIN}|g" \

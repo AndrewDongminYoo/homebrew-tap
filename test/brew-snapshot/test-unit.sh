@@ -194,6 +194,27 @@ _assert_match "${output}" "Formulae:"
 _assert_match "${output}" "Taps:"
 _pass "status: mock state → shows snapshot info"
 
+printf 'tap "homebrew/core"\n' > "${TMPDIR_STATE}/Brewfile"
+output="$("${BIN}" status)"
+[[ "${output}" == *$'Formulae:       0\nCasks:          0\nTaps:'* ]] || _fail "status must print each zero count once: ${output}"
+_pass "status: no formula or cask lines → each count printed once"
+
+# ── setup ────────────────────────────────────────────────────────────────────
+# launchd gives agents no Homebrew on PATH, so the plist must carry brew's directory.
+setup_fixture="${TMPDIR_OPTIONS}/setup"
+mkdir -p "${setup_fixture}/home" "${setup_fixture}/fakebin"
+printf '#!/bin/sh\nexit 0\n' > "${setup_fixture}/fakebin/brew"
+printf '#!/bin/sh\necho "launchctl $*" >> "%s/calls"\n' "${setup_fixture}" > "${setup_fixture}/fakebin/launchctl"
+chmod +x "${setup_fixture}/fakebin/brew" "${setup_fixture}/fakebin/launchctl"
+output="$(HOME="${setup_fixture}/home" USER=tester PATH="${setup_fixture}/fakebin:/usr/bin:/bin" \
+  "${SCRIPT_DIR}/../../libexec/brew-snapshot/commands/setup.sh" 2>&1)" || _fail "setup failed: ${output}"
+plist="${setup_fixture}/home/Library/LaunchAgents/com.tester.brew-snapshot.plist"
+plutil -lint "${plist}" >/dev/null || _fail "setup wrote an invalid plist"
+launchd_path="$(plutil -extract EnvironmentVariables.PATH raw "${plist}" 2>/dev/null || true)"
+[[ "${launchd_path}" == "${setup_fixture}/fakebin:/usr/bin:/bin:/usr/sbin:/sbin" ]] || _fail "LaunchAgent PATH lacks brew's directory: ${launchd_path}"
+_assert_match "$(< "${setup_fixture}/calls")" "launchctl load ${plist}"
+_pass "setup: LaunchAgent PATH starts with brew's directory"
+
 # ── restore ──────────────────────────────────────────────────────────────────
 rm -f "${TMPDIR_STATE}/Brewfile"
 output="$("${BIN}" restore 2>&1 || true)"
