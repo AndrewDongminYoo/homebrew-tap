@@ -375,4 +375,120 @@ jq -e '.node_version == "20.2.0" and .packages == {"real-pkg": "1.0.0"}' "${fixt
     || _fail "snapshot recorded the shadowing node: $(< "${fixture}/state/lts-iron.lock.json")"
 _pass "snapshot: nvm's node wins over a node earlier in PATH"
 
+# ── upgrade and snapshot failure paths ───────────────────────────────────────
+# The mock nvm installs into the fixture and, like nvm, refuses --reinstall-packages-from
+# for a version that is not installed. MOCK_FAIL_INSTALL, MOCK_OFFLINE and MOCK_NPM_LIST_EXIT
+# select the failure under test.
+make_upgrade_fixture() {
+    local dir="$1"
+    rm -rf "${dir}"
+    mkdir -p "${dir}/nvm/versions/node/v20.2.0/lib/node_modules" \
+        "${dir}/nvm/versions/node/v22.1.0/lib/node_modules" "${dir}/nvm/alias/lts" "${dir}/state"
+    printf 'v20.2.0\n' > "${dir}/nvm/alias/lts/iron"
+    printf 'v22.1.0\n' > "${dir}/nvm/alias/lts/jod"
+    printf '{"tracked":["iron","jod"],"check_interval_days":1,"last_check_utc":""}\n' > "${dir}/state/config.json"
+    printf '{"node_version":"20.2.0","packages":{}}\n' > "${dir}/state/lts-iron.lock.json"
+    printf '{"node_version":"22.1.0","packages":{}}\n' > "${dir}/state/lts-jod.lock.json"
+    : > "${dir}/nvm/calls"
+    cat > "${dir}/nvm/nvm.sh" <<'SH'
+_mock_remote() { case "$1" in lts/iron) echo v20.3.0 ;; lts/jod) echo v22.2.0 ;; esac; }
+_mock_resolve() {
+    local v="$1"
+    [[ "${v}" == lts/* ]] && v="$(< "${NVM_DIR}/alias/lts/${v#lts/}")"
+    [[ -d "${NVM_DIR}/versions/node/${v}" ]] && echo "${v}" || echo N/A
+}
+nvm() {
+    local v arg
+    case "$1" in
+        deactivate) return 0 ;;
+        version-remote) _mock_remote "$2" ;;
+        install)
+            echo "$*" >> "${NVM_DIR}/calls"
+            [[ "$2" != "${MOCK_FAIL_INSTALL:-}" ]] || return 1
+            for arg in "$@"; do
+                [[ "${arg}" != --reinstall-packages-from=* ]] && continue
+                [[ -d "${NVM_DIR}/versions/node/v${arg#*=}" ]] || return 5
+            done
+            v="$(_mock_remote "$2")"
+            mkdir -p "${NVM_DIR}/versions/node/${v}/lib/node_modules"
+            echo "${v}" > "${NVM_DIR}/alias/lts/${2#lts/}" ;;
+        use)
+            v="$(_mock_resolve "$2")"
+            [[ "${v}" != N/A ]] || return 3
+            export MOCK_VERSION="${v#v}" ;;
+        version) _mock_resolve "$2" ;;
+        ls-remote)
+            echo "ls-remote $2" >> "${NVM_DIR}/calls"
+            [[ -z "${MOCK_OFFLINE:-}" ]] || return 3
+            echo "       $(_mock_remote "$2")" ;;
+        ls) _mock_resolve "$2" ;;
+        *) return 91 ;;
+    esac
+}
+node() { echo "v${MOCK_VERSION:-0}"; }
+npm() {
+    case "$1" in
+        root) echo "${NVM_DIR}/versions/node/v${MOCK_VERSION:-0}/lib/node_modules" ;;
+        list)
+            if [[ -n "${MOCK_NPM_LIST_JSON:-}" ]]; then
+                echo "${MOCK_NPM_LIST_JSON}"
+            else
+                echo '{"dependencies":{"pkg":{"version":"1.0.0"}}}'
+            fi
+            return "${MOCK_NPM_LIST_EXIT:-0}" ;;
+        install) echo "npm $*" >> "${NVM_DIR}/calls" ;;
+        *) return 94 ;;
+    esac
+}
+SH
+}
+ufix="${TMPDIR_OPTIONS}/upgrade-paths"
+unode() { NVM_DIR="${ufix}/nvm" NODE_SNAPSHOT_DIR="${ufix}/state" "${BIN}" "$@" 2>&1; }
+
+make_upgrade_fixture "${ufix}"
+printf '{"node_version":"20.0.9","packages":{}}\n' > "${ufix}/state/lts-iron.lock.json"
+output="$(unode upgrade iron)" || _fail "upgrade must not pass an uninstalled version to --reinstall-packages-from: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" == "install lts/iron --latest-npm" ]] || _fail "unexpected install: $(< "${ufix}/nvm/calls")"
+_pass "upgrade: a lock version that is not installed is restored from the lock"
+
+# The lock names the newest release, which nvm installs, so old and new versions match.
+make_upgrade_fixture "${ufix}"
+printf '{"node_version":"20.3.0","packages":{"pkg-x":"1.0.0"}}\n' > "${ufix}/state/lts-iron.lock.json"
+output="$(unode upgrade iron)" || _fail "upgrade must restore a lock whose version it just installed: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" == *"npm install -g pkg-x@1.0.0"* ]] || _fail "packages were not restored from the lock: $(< "${ufix}/nvm/calls")"
+_pass "upgrade: a lock version installed by this upgrade is restored from the lock"
+
+make_upgrade_fixture "${ufix}"
+command_exit=0
+output="$(MOCK_FAIL_INSTALL=lts/iron unode upgrade)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && "${output}" == *"lts/iron: upgrade failed"* ]] || _fail "a failed alias must be reported: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" == *"install lts/jod"* ]] || _fail "a failed alias must not stop the next one: $(< "${ufix}/nvm/calls")"
+_pass "upgrade: one failed alias does not stop the others"
+
+make_upgrade_fixture "${ufix}"
+output="$(MOCK_NPM_LIST_EXIT=1 unode snapshot iron)" || _fail "snapshot must accept npm list output with a non-zero status: ${output}"
+jq -e '.packages == {"pkg": "1.0.0"}' "${ufix}/state/lts-iron.lock.json" >/dev/null || _fail "snapshot did not record the listed packages"
+_pass "snapshot: npm list ELSPROBLEMS exit still records the packages"
+
+make_upgrade_fixture "${ufix}"
+rm "${ufix}/state/lts-iron.lock.json"
+command_exit=0
+output="$(MOCK_NPM_LIST_EXIT=1 MOCK_NPM_LIST_JSON='{"error":{"code":"EFAIL"}}' unode snapshot iron)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && ! -e "${ufix}/state/lts-iron.lock.json" ]] || _fail "a failed npm list must not be recorded as no packages: ${output}"
+_pass "snapshot: a failed npm list without dependencies records nothing"
+
+make_upgrade_fixture "${ufix}"
+output="$(MOCK_OFFLINE=1 unode upgrade --check)" || _fail "upgrade --check failed offline: ${output}"
+[[ "$(jq -r '.last_check_utc' "${ufix}/state/config.json")" == "" ]] || _fail "an offline check must not be recorded"
+_pass "upgrade --check: an offline check is not recorded"
+
+# 20 hours ago is under the one-day interval in UTC, but over it when parsed as KST.
+make_upgrade_fixture "${ufix}"
+recent="$(date -u -v-20H +"%Y-%m-%dT%H:%M:%SZ")"
+jq --arg t "${recent}" '.last_check_utc = $t' "${ufix}/state/config.json" > "${ufix}/state/config.tmp"
+mv "${ufix}/state/config.tmp" "${ufix}/state/config.json"
+output="$(TZ=Asia/Seoul unode upgrade --check)" || _fail "upgrade --check failed: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" != *ls-remote* ]] || _fail "a check within the interval ran in a UTC+9 zone"
+_pass "upgrade --check: the last check time is read as UTC"
+
 echo ""; echo "All unit tests: PASS"

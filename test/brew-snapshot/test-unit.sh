@@ -194,6 +194,36 @@ _assert_match "${output}" "Formulae:"
 _assert_match "${output}" "Taps:"
 _pass "status: mock state → shows snapshot info"
 
+printf 'tap "homebrew/core"\n' > "${TMPDIR_STATE}/Brewfile"
+output="$("${BIN}" status)"
+[[ "${output}" == *$'Formulae:       0\nCasks:          0\nTaps:'* ]] || _fail "status must print each zero count once: ${output}"
+_pass "status: no formula or cask lines → each count printed once"
+
+# ── setup ────────────────────────────────────────────────────────────────────
+# launchd gives agents no Homebrew on PATH, so the plist must carry brew's directory.
+# The fixture path holds & and |, which a sed replacement would interpret, and brew is found
+# through a relative PATH entry, which the agent's working directory would not resolve.
+setup_fixture="${TMPDIR_OPTIONS}/setup &|x"
+mkdir -p "${setup_fixture}/home" "${setup_fixture}/fakebin"
+printf '#!/bin/sh\nexit 0\n' > "${setup_fixture}/fakebin/brew"
+cat > "${setup_fixture}/fakebin/launchctl" <<'SH'
+#!/bin/sh
+echo "launchctl $*" >> "$HOME/../calls"
+SH
+chmod +x "${setup_fixture}/fakebin/brew" "${setup_fixture}/fakebin/launchctl"
+output="$(cd "${setup_fixture}" && HOME="${setup_fixture}/home" USER=tester BREW_SNAPSHOT_DIR="${setup_fixture}/state" \
+  PATH="fakebin:/usr/bin:/bin" "${SCRIPT_DIR}/../../libexec/brew-snapshot/commands/setup.sh" 2>&1)" || _fail "setup failed: ${output}"
+plist="${setup_fixture}/home/Library/LaunchAgents/com.tester.brew-snapshot.plist"
+plutil -lint "${plist}" >/dev/null || _fail "setup wrote an invalid plist"
+plist_value() { plutil -extract "$1" raw "${plist}" 2>/dev/null || true; }
+[[ "$(plist_value EnvironmentVariables.PATH)" == "${setup_fixture}/fakebin:/usr/bin:/bin:/usr/sbin:/sbin" ]] \
+  || _fail "LaunchAgent PATH must start with brew's absolute directory: $(plist_value EnvironmentVariables.PATH)"
+[[ "$(plist_value StandardOutPath)" == "${setup_fixture}/state/snapshot.stdout.log" ]] \
+  || _fail "StandardOutPath was not written verbatim: $(plist_value StandardOutPath)"
+[[ "$(plist_value Label)" == "com.tester.brew-snapshot" ]] || _fail "Label: $(plist_value Label)"
+_assert_match "$(< "${setup_fixture}/calls")" "launchctl load ${plist}"
+_pass "setup: LaunchAgent PATH starts with brew's absolute directory, paths kept verbatim"
+
 # ── restore ──────────────────────────────────────────────────────────────────
 rm -f "${TMPDIR_STATE}/Brewfile"
 output="$("${BIN}" restore 2>&1 || true)"

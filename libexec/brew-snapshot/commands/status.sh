@@ -25,8 +25,11 @@ cask_count=0
 tap_count=0
 
 if [[ -f "${STATE_DIR}/Brewfile" ]]; then
-  formula_count=$(grep -c "^brew "  "${STATE_DIR}/Brewfile" 2>/dev/null || echo 0)
-  cask_count=$(grep -c    "^cask "  "${STATE_DIR}/Brewfile" 2>/dev/null || echo 0)
+  # grep -c prints 0 itself and exits 1 when nothing matches, so `|| echo 0` printed it twice.
+  formula_count=$(grep -c "^brew "  "${STATE_DIR}/Brewfile" 2>/dev/null || true)
+  cask_count=$(grep -c    "^cask "  "${STATE_DIR}/Brewfile" 2>/dev/null || true)
+  formula_count="${formula_count:-0}"
+  cask_count="${cask_count:-0}"
 fi
 
 if [[ -f "${STATE_DIR}/Brewfile.taps" ]]; then

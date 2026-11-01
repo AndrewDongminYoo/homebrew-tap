@@ -41,7 +41,8 @@ _check_mode() {
     interval="$(jq -r '.check_interval_days // 7' "${STATE_DIR}/config.json" 2>/dev/null || echo '7')"
 
     if [[ -n "${last_check}" ]]; then
-        last_epoch="$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${last_check}" "+%s" 2>/dev/null || echo '0')"
+        # The trailing Z is a literal to date -j, so name the zone or it parses local time.
+        last_epoch="$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "${last_check}" "+%s" 2>/dev/null || echo '0')"
         now_epoch="$(date -u "+%s")"
         days_since=$(( (now_epoch - last_epoch) / 86400 ))
         if [[ "${days_since}" -lt "${interval}" ]]; then
@@ -49,10 +50,12 @@ _check_mode() {
         fi
     fi
 
+    local reached=false
     while IFS= read -r lts_alias; do
         local remote_latest local_version
         remote_latest="$(nvm ls-remote "lts/${lts_alias}" --no-colors 2>/dev/null \
             | grep -o 'v[0-9.]*' | tail -1 || echo '')"
+        [[ -n "${remote_latest}" ]] && reached=true
         local_version="$(nvm ls "lts/${lts_alias}" --no-colors 2>/dev/null \
             | grep -v 'N/A' | grep -o 'v[0-9.]*' | head -1 || echo '')"
 
@@ -62,7 +65,10 @@ _check_mode() {
         fi
     done < <(jq -r '.tracked[]' "${STATE_DIR}/config.json" 2>/dev/null || true)
 
-    _update_last_check
+    # Offline, every lookup is empty; recording the check would skip the next interval.
+    if ${reached}; then
+        _update_last_check
+    fi
 }
 
 _upgrade_alias() {
@@ -72,6 +78,12 @@ _upgrade_alias() {
 
     if [[ -f "${lock_file}" ]]; then
         old_node_version="$(jq -r '.node_version // ""' "${lock_file}" 2>/dev/null || echo '')"
+    fi
+    # On a Mac restored from the lock the locked version is not installed; its packages then
+    # come from the lock even when nvm installs that same version below.
+    local old_node_installed=false
+    if [[ -n "${old_node_version}" && -d "${NVM_DIR}/versions/node/v${old_node_version}" ]]; then
+        old_node_installed=true
     fi
 
     # Resolve the target version before installing so the reinstall flag is only
@@ -84,8 +96,11 @@ _upgrade_alias() {
     # --reinstall-packages-from, the new Node version is installed with an empty
     # global set; a snapshot taken in that window would overwrite the lock with
     # an empty package list (see snapshot.sh — live state always wins).
+    # nvm refuses to install at all when the reinstall source is not installed, as on a new
+    # Mac restored from the lock; migrate.sh below then restores the packages from the lock.
     if [[ -n "${old_node_version}" ]] && [[ -n "${target_version}" ]] \
-        && [[ "${old_node_version}" != "${target_version}" ]]; then
+        && [[ "${old_node_version}" != "${target_version}" ]] \
+        && ${old_node_installed}; then
         echo "→ nvm install lts/${lts_alias} --latest-npm --reinstall-packages-from=${old_node_version}"
         nvm install "lts/${lts_alias}" --latest-npm --reinstall-packages-from="${old_node_version}"
     else
@@ -96,7 +111,8 @@ _upgrade_alias() {
     local new_node_version
     new_node_version="$(node -v | tr -d 'v')"
 
-    if [[ -n "${old_node_version}" ]] && [[ "${old_node_version}" != "${new_node_version}" ]]; then
+    if [[ -n "${old_node_version}" ]] \
+        && [[ "${old_node_version}" != "${new_node_version}" || "${old_node_installed}" == false ]]; then
         echo "→ migrating packages (${old_node_version} → ${new_node_version})"
         "${_self_dir}/migrate.sh" "${lts_alias}" "${lts_alias}"
         # migrate.sh runs snapshot internally
@@ -124,7 +140,18 @@ fi
 if [[ -n "${ALIAS}" ]]; then
     _upgrade_alias "${ALIAS}"
 else
+    aliases=()
     while IFS= read -r lts_alias; do
-        _upgrade_alias "${lts_alias}"
+        [[ -n "${lts_alias}" ]] && aliases+=("${lts_alias}")
     done < <(jq -r '.tracked[]' "${STATE_DIR}/config.json" 2>/dev/null || true)
+    # Each alias runs in its own process: set -e still stops that alias at its first failure,
+    # the next aliases still run, and nvm or npm cannot read the alias list from stdin.
+    failed=0
+    for lts_alias in ${aliases[@]+"${aliases[@]}"}; do
+        "${BASH_SOURCE[0]}" "${lts_alias}" </dev/null || {
+            echo "⚠ lts/${lts_alias}: upgrade failed" >&2
+            failed=1
+        }
+    done
+    exit "${failed}"
 fi

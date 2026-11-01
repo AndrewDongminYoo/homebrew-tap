@@ -22,13 +22,26 @@ fi
 PLIST_DEST="${HOME}/Library/LaunchAgents/com.${USER}.brew-snapshot.plist"
 BREW_SNAPSHOT_BIN="$(command -v brew-snapshot || echo "${_commands_dir}/../../../bin/brew-snapshot")"
 
+# launchd starts agents with PATH=/usr/bin:/bin:/usr/sbin:/sbin, which has no Homebrew,
+# so record the directory that holds brew now. A relative PATH entry gives a relative
+# result, and the agent starts in another directory, so make it absolute.
+BREW_BIN="$(command -v brew || true)"
+if [[ -z "${BREW_BIN}" ]]; then
+  echo "Error: brew not found on PATH" >&2
+  exit 1
+fi
+LAUNCHD_PATH="$(cd "$(dirname "${BREW_BIN}")" && pwd):/usr/bin:/bin:/usr/sbin:/sbin"
+
 mkdir -p "${HOME}/Library/LaunchAgents"
 
-sed \
-  -e "s|__USER__|${USER}|g" \
-  -e "s|__STATE_DIR__|${STATE_DIR}|g" \
-  -e "s|__BIN__|${BREW_SNAPSHOT_BIN}|g" \
-  "${PLIST_TEMPLATE}" > "${PLIST_DEST}"
+# plutil writes each value as a plist string, so a path may hold any character,
+# including the & and | that a sed replacement would interpret.
+cp "${PLIST_TEMPLATE}" "${PLIST_DEST}"
+plutil -replace EnvironmentVariables.PATH -string "${LAUNCHD_PATH}" "${PLIST_DEST}"
+plutil -replace Label -string "com.${USER}.brew-snapshot" "${PLIST_DEST}"
+plutil -replace ProgramArguments.0 -string "${BREW_SNAPSHOT_BIN}" "${PLIST_DEST}"
+plutil -replace StandardErrorPath -string "${STATE_DIR}/snapshot.stderr.log" "${PLIST_DEST}"
+plutil -replace StandardOutPath -string "${STATE_DIR}/snapshot.stdout.log" "${PLIST_DEST}"
 
 launchctl unload "${PLIST_DEST}" 2>/dev/null || true
 launchctl load "${PLIST_DEST}"
