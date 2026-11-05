@@ -20,7 +20,7 @@ The release workflow updates embedded versions after tagging, so tagged scripts 
 
 Publish `v0.6.0` after the PR merges, using the existing shared tag workflow.
 Install both released tools locally and verify their reported versions and informational options.
-The operator retains the merge decision.
+I retain the merge decision.
 
 ## Verification
 
