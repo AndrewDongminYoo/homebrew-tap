@@ -2,7 +2,7 @@
 
 ## Direction and Ownership
 
-The operator approved common CLI handling, current-state-only snapshot semantics, a new release, and local installation after merge.
+Common CLI handling, current-state-only snapshot semantics, a new release, and local installation after merge were approved.
 The root agent owns all edits, verification, staging, commits, and publication in the existing workspace.
 
 ## Execution
@@ -11,7 +11,7 @@ The root agent owns all edits, verification, staging, commits, and publication i
 2. Repair embedded version installation in both formulas and strengthen their version assertions.
 3. Verify both real installation methods in temporary prefixes, both unit suites, ShellCheck, Trunk, and the complete diff.
 4. Commit CLI behavior and packaging fixes separately, then push and open one PR against `main`.
-5. Observe current-head CI and hosted review, repair confirmed findings within the approved scope, and request operator merge.
+5. Observe current-head CI and hosted review, repair confirmed findings within the approved scope, and request merge.
 6. Verify the merge, create `v0.6.0` on the merged commit, and observe the shared release workflow.
 7. Verify both published formulas and checksums, install both tools locally, and check installed versions and command behavior.
 
@@ -26,6 +26,6 @@ The root agent owns all edits, verification, staging, commits, and publication i
 
 ## Boundaries
 
-Merge remains with the operator.
+Merge remains with me.
 Branch cleanup and memory recording were not requested.
 The local install stage resumes after remote merge verification.
