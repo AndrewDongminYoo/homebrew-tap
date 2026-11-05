@@ -430,13 +430,23 @@ npm() {
     case "$1" in
         root) echo "${NVM_DIR}/versions/node/v${MOCK_VERSION:-0}/lib/node_modules" ;;
         list)
-            if [[ -n "${MOCK_NPM_LIST_JSON:-}" ]]; then
+            if [[ -n "${MOCK_GLOBALS_FILE:-}" ]]; then
+                cat "${MOCK_GLOBALS_FILE}"
+            elif [[ -n "${MOCK_NPM_LIST_JSON:-}" ]]; then
                 echo "${MOCK_NPM_LIST_JSON}"
             else
                 echo '{"dependencies":{"pkg":{"version":"1.0.0"}}}'
             fi
             return "${MOCK_NPM_LIST_EXIT:-0}" ;;
-        install) echo "npm $*" >> "${NVM_DIR}/calls" ;;
+        install)
+            echo "npm $*" >> "${NVM_DIR}/calls"
+            [[ -z "${MOCK_FAIL_NPM_INSTALL:-}" ]] || return 7
+            if [[ -n "${MOCK_GLOBALS_FILE:-}" ]]; then
+                jq --arg pkg "${3%@*}" --arg version "${3##*@}" \
+                    '.dependencies[$pkg] = {version: $version}' "${MOCK_GLOBALS_FILE}" > "${MOCK_GLOBALS_FILE}.tmp"
+                mv "${MOCK_GLOBALS_FILE}.tmp" "${MOCK_GLOBALS_FILE}"
+            fi
+            ;;
         *) return 94 ;;
     esac
 }
@@ -457,6 +467,58 @@ printf '{"node_version":"20.3.0","packages":{"pkg-x":"1.0.0"}}\n' > "${ufix}/sta
 output="$(unode upgrade iron)" || _fail "upgrade must restore a lock whose version it just installed: ${output}"
 [[ "$(< "${ufix}/nvm/calls")" == *"npm install -g pkg-x@1.0.0"* ]] || _fail "packages were not restored from the lock: $(< "${ufix}/nvm/calls")"
 _pass "upgrade: a lock version installed by this upgrade is restored from the lock"
+
+# An already-installed target may still have no user globals (e.g. after a restore).
+make_upgrade_fixture "${ufix}"
+mkdir -p "${ufix}/nvm/versions/node/v20.3.0/lib/node_modules"
+printf '{"node_version":"20.3.0","packages":{"pkg-x":"1.0.0"}}\n' > "${ufix}/state/lts-iron.lock.json"
+printf '{"dependencies":{"npm":{"version":"10.0.0"},"corepack":{"version":"0.30.0"}}}\n' > "${ufix}/globals.json"
+output="$(MOCK_GLOBALS_FILE="${ufix}/globals.json" unode upgrade iron)" \
+    || _fail "upgrade must restore empty globals on an already-installed lock version: ${output}"
+jq -e '.dependencies["pkg-x"].version == "1.0.0"' "${ufix}/globals.json" >/dev/null \
+    || _fail "upgrade did not restore the locked package"
+jq -e '.node_version == "20.3.0" and .packages == {"pkg-x":"1.0.0"}' "${ufix}/state/lts-iron.lock.json" >/dev/null \
+    || _fail "upgrade did not retain the restored package in the lock"
+_pass "upgrade: already-installed lock version with empty globals is restored"
+
+: > "${ufix}/nvm/calls"
+output="$(MOCK_GLOBALS_FILE="${ufix}/globals.json" unode upgrade iron)" \
+    || _fail "upgrade of populated globals must succeed: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" != *"npm install"* ]] || _fail "populated globals must not be reinstalled"
+_pass "upgrade: repeat on populated globals does not reinstall packages"
+
+printf '{"dependencies":{"live-pkg":{"version":"2.0.0"}}}\n' > "${ufix}/globals.json"
+output="$(MOCK_GLOBALS_FILE="${ufix}/globals.json" unode upgrade iron)" \
+    || _fail "upgrade must snapshot a non-empty live set: ${output}"
+jq -e '.packages == {"live-pkg":"2.0.0"}' "${ufix}/state/lts-iron.lock.json" >/dev/null \
+    || _fail "upgrade must keep the non-empty live set authoritative"
+_pass "upgrade: non-empty live globals remain authoritative"
+
+printf '{"dependencies":{}}\n' > "${ufix}/globals.json"
+lock_before="$(< "${ufix}/state/lts-iron.lock.json")"
+command_exit=0
+output="$(MOCK_GLOBALS_FILE="${ufix}/globals.json" unode snapshot iron)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && "$(< "${ufix}/state/lts-iron.lock.json")" == "${lock_before}" ]] \
+    || _fail "direct snapshot must still refuse an empty wipe: ${output}"
+_pass "snapshot: empty wipe guard remains active"
+
+: > "${ufix}/nvm/calls"
+command_exit=0
+output="$(MOCK_GLOBALS_FILE="${ufix}/globals.json" MOCK_FAIL_NPM_INSTALL=1 unode upgrade iron)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && "$(< "${ufix}/state/lts-iron.lock.json")" == "${lock_before}" ]] \
+    || _fail "failed package restoration must preserve the lock: ${output}"
+[[ "$(< "${ufix}/nvm/calls")" == *"npm install -g live-pkg@2.0.0"* ]] \
+    || _fail "upgrade did not attempt restoration"
+_pass "upgrade: failed same-version restoration preserves the lock"
+
+: > "${ufix}/nvm/calls"
+printf '{"error":{"code":"EFAIL"}}\n' > "${ufix}/globals.json"
+command_exit=0
+output="$(MOCK_GLOBALS_FILE="${ufix}/globals.json" MOCK_NPM_LIST_EXIT=1 unode upgrade iron)" || command_exit=$?
+[[ "${command_exit}" -ne 0 && "$(< "${ufix}/state/lts-iron.lock.json")" == "${lock_before}" \
+    && "$(< "${ufix}/nvm/calls")" != *"npm install"* ]] \
+    || _fail "failed npm inspection must not trigger restoration or change the lock: ${output}"
+_pass "upgrade: failed npm inspection preserves the lock without restoration"
 
 make_upgrade_fixture "${ufix}"
 command_exit=0

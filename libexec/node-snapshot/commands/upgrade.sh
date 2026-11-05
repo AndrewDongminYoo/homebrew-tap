@@ -111,8 +111,26 @@ _upgrade_alias() {
     local new_node_version
     new_node_version="$(node -v | tr -d 'v')"
 
+    local needs_migration=false
     if [[ -n "${old_node_version}" ]] \
         && [[ "${old_node_version}" != "${new_node_version}" || "${old_node_installed}" == false ]]; then
+        needs_migration=true
+    elif [[ -f "${lock_file}" ]] && jq -e '(.packages // {}) | length > 0' "${lock_file}" >/dev/null; then
+        # An existing installation can still be bare. Restore its lock before
+        # snapshotting, while keeping non-empty live globals authoritative.
+        local npm_json npm_status=0
+        npm_json="$(npm list -g --depth=0 --json 2>/dev/null)" || npm_status=$?
+        if [[ "${npm_status}" -ne 0 ]] \
+            && ! jq -e '(.dependencies | type) == "object"' <<< "${npm_json}" >/dev/null 2>&1; then
+            echo "✗ lts/${lts_alias}: npm list -g failed (exit ${npm_status}) without a package list" >&2
+            return 1
+        fi
+        if jq -e '.dependencies // {} | del(.npm, .corepack) | length == 0' <<< "${npm_json}" >/dev/null; then
+            needs_migration=true
+        fi
+    fi
+
+    if ${needs_migration}; then
         echo "→ migrating packages (${old_node_version} → ${new_node_version})"
         "${_self_dir}/migrate.sh" "${lts_alias}" "${lts_alias}"
         # migrate.sh runs snapshot internally

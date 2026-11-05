@@ -251,6 +251,7 @@ Running `snapshot` in that window would otherwise overwrite a populated lock wit
 Two safeguards prevent this:
 
 - **`upgrade` carries packages forward.** On a version bump it passes `nvm install --reinstall-packages-from=<old version>`, so the new version inherits the old globals instead of starting bare.
+  If the target version is already installed but has no user globals, it restores packages from the existing lock before taking a snapshot.
 - **`snapshot` refuses a full wipe.** If the live global set is empty but the lock still tracks packages, `snapshot` aborts rather than recording the empty state. Partial drops (some packages removed) are recorded but printed as a warning so the change is visible before you commit.
 
 ```bash
